@@ -307,7 +307,7 @@ saveDays:function(rows){return sb.from('workout_days').upsert(rows.map(function(
 monthDays:function(since,until){return sb.from('workout_days').select('user_id,day,sets').gte('day',since).lt('day',until).limit(5000).then(must)},
 achieve:function(name,value,id){var q=id?sb.from('achievements').update({value:value,created_at:new Date().toISOString()}).eq('id',id):sb.from('achievements').insert({user_id:uid,exercise:String(name).slice(0,40),value:String(value).slice(0,30)});
 return q.select('id').maybeSingle().then(function(r){var d=must(r);if(!d&&id)return api.achieve(name,value);return d&&d.id})},
-achievements:function(o){var q=sb.from('achievements').select('id,user_id,exercise,value,created_at,profiles(display_name,avatar_path),cheers(user_id)').gte('created_at',new Date(o.since).toISOString()).order('created_at',{ascending:false}).limit(30);if(o.user)q=q.eq('user_id',o.user);
+achievements:function(o){var q=sb.from('achievements').select('id,user_id,exercise,value,created_at,profiles!achievements_user_id_fkey(display_name,avatar_path),cheers(user_id)').gte('created_at',new Date(o.since).toISOString()).order('created_at',{ascending:false}).limit(30);if(o.user)q=q.eq('user_id',o.user);
 return q.then(function(r){return must(r).map(function(a){return{id:a.id,user_id:a.user_id,exercise:a.exercise,value:a.value,created_at:a.created_at,name:who(a).display_name||'',avatar:pub(who(a).avatar_path),cheers:(a.cheers||[]).map(function(c){return c.user_id})}})})},
 cheer:function(id,on){return(on?sb.from('cheers').insert({achievement_id:id,user_id:uid}):sb.from('cheers').delete().eq('achievement_id',id).eq('user_id',uid)).then(function(r){if(r.error&&r.error.code!=='23505')throw r.error})},
 me:function(){return sb.from('profiles').select('*').eq('id',uid).single().then(function(r){var m=must(r);m.avatar_url=pub(m.avatar_path);return m})},
@@ -321,7 +321,7 @@ request:function(id){return sb.from('friendships').insert({requester:uid,address
 accept:function(r){return sb.from('friendships').update({status:'accepted'}).eq('requester',r.requester).eq('addressee',r.addressee).then(must)},
 unfriend:function(r){return sb.from('friendships').delete().eq('requester',r.requester).eq('addressee',r.addressee).then(must)},
 block:function(id){return sb.rpc('block_user',{target:id}).then(must)},
-feed:async function(o){o=o||{};var q=sb.from('posts').select('*, profiles(display_name,avatar_path), likes(user_id), comments(count)').order('performed_at',{ascending:false}).limit(o.limit||30);
+feed:async function(o){o=o||{};var q=sb.from('posts').select('*, profiles!posts_user_id_fkey(display_name,avatar_path), likes(user_id), comments(count)').order('performed_at',{ascending:false}).limit(o.limit||30);
 if(o.user)q=q.eq('user_id',o.user);if(o.since)q=q.gte('performed_at',new Date(o.since).toISOString());var ps=must(await q);if(!o.noPhotos)await sign(ps.map(function(p){return p.photo_path}));return ps.map(post)},
 like:function(id,on){return(on?sb.from('likes').insert({post_id:id,user_id:uid}):sb.from('likes').delete().eq('post_id',id).eq('user_id',uid)).then(function(r){if(r.error&&r.error.code!=='23505')throw r.error})},
 comments:function(id){return sb.from('comments').select('id,user_id,body,created_at,profiles(display_name,avatar_path)').eq('post_id',id).order('created_at').then(function(r){return must(r).map(function(c){return{id:c.id,user_id:c.user_id,name:who(c).display_name||'',avatar:pub(who(c).avatar_path),body:c.body,created_at:c.created_at}})})},
