@@ -8,7 +8,13 @@ var native=!!(C&&C.isNativePlatform&&C.isNativePlatform()),ios=native&&C.getPlat
 var RC=native&&C.Plugins&&C.Plugins.Purchases,apiKey=ios?rc.iosKey:rc.androidKey,ENT='pro',TRIAL='pump-pro-trial-v1';
 var active=false,ready=false,offering=null,W=window.WK||{},esc=W.esc||String;
 
-function set(on){on=!!on;if(on===active&&ready)return;active=on;ready=true;try{document.dispatchEvent(new CustomEvent('wk:pro',{detail:{active:on}}))}catch(e){}}
+var paid=false,grantUntil=0,gTimer=null;
+function byGrant(){return grantUntil>Date.now()}
+function set(p){paid=!!p;apply()}
+function apply(){var on=paid||byGrant();if(on===active&&ready)return;active=on;ready=true;try{document.dispatchEvent(new CustomEvent('wk:pro',{detail:{active:on}}))}catch(e){}}
+// 招待の特典の期限（ミリ秒）。期限が来たら自動でオフにする
+function grant(u){grantUntil=+u||0;if(gTimer)clearTimeout(gTimer);var left=grantUntil-Date.now();if(left>0&&left<2147483647)gTimer=setTimeout(apply,left+500);apply()}
+function untilText(){var d=new Date(grantUntil);return (d.getMonth()+1)+'月'+d.getDate()+'日'}
 function fromInfo(info){return !!(info&&info.entitlements&&info.entitlements.active&&info.entitlements.active[ENT])}
 
 
@@ -24,14 +30,14 @@ function legalHtml(){var l=cfg.legal||{},a=[];if(l.termsUrl)a.push("<a href='"+e
 function card(html){var d=document.createElement('div');d.className='day gc';d.innerHTML=html;return d}
 
 function paywall(el){el.innerHTML='';
-  el.appendChild(card("<h2 style='font-size:22px'>PUMP<span class='pb'>PRO</span></h2>"+(active?"<p class='fn'>✅ PUMP Pro を使っているよ。ありがとう！</p>":"<p class='fn'>記録・グラフ・友達機能は、ずっと無料で使えるよ。もっと楽しみたい人向けのプラン。</p>")+featuresHtml()));
+  el.appendChild(card("<h2 style='font-size:22px'>PUMP<span class='pb'>PRO</span></h2>"+(paid?"<p class='fn'>✅ PUMP Pro を使っているよ。ありがとう！</p>":byGrant()?"<p class='fn'>🎁 招待の特典で PUMP Pro が使えるよ（"+untilText()+"まで）。そのあとも続けたい人は、下から購入できるよ。</p>":"<p class='fn'>記録・グラフ・友達機能は、ずっと無料で使えるよ。もっと楽しみたい人向けのプラン。</p>")+featuresHtml()));
   if(!native){ // ブラウザ版（試用）
     var t=card("<h2>試用版のスイッチ</h2><p class='fn'>ここではお金はかからない。Pro の機能を試すためのスイッチだよ。アプリ版では App Store / Google Play で購入する。</p>");
-    var b=document.createElement('button');b.className='hb2';b.textContent=active?'Pro をオフにする':'Pro をオンにして試す';
-    b.addEventListener('click',function(){try{localStorage.setItem(TRIAL,active?'0':'1')}catch(e){}set(!active);paywall(el)});
+    var b=document.createElement('button');b.className='hb2';b.textContent=paid?'Pro をオフにする':'Pro をオンにして試す';
+    b.addEventListener('click',function(){try{localStorage.setItem(TRIAL,paid?'0':'1')}catch(e){}set(!paid);paywall(el)});
     t.appendChild(b);el.appendChild(t);return}
   if(!RC||!apiKey){el.appendChild(card("<p class='fn'>購入の準備中だよ。もうしばらく待ってね。</p>"));return}
-  if(active){var m=card("<p class='fn'>プランの変更・解約は、"+(ios?'iPhone の「設定」→ 自分の名前 →「サブスクリプション」':'Google Play の「お支払いと定期購入」')+'から。</p>');el.appendChild(m);return}
+  if(paid){var m=card("<p class='fn'>プランの変更・解約は、"+(ios?'iPhone の「設定」→ 自分の名前 →「サブスクリプション」':'Google Play の「お支払いと定期購入」')+'から。</p>');el.appendChild(m);return}
   var box=card("<h2>プランを選ぶ</h2><div class='pk'><p class='fn'>読み込み中…</p></div>"),pk=box.querySelector('.pk'),msg=document.createElement('div');msg.className='fn';
   el.appendChild(box);
   (offering?Promise.resolve(offering):RC.getOfferings().then(function(o){return offering=o&&o.current})).then(function(of){
@@ -50,7 +56,7 @@ function paywall(el){el.innerHTML='';
   var note=card("<p class='fn'>月額・年額は、期間が終わる24時間前までに解約しない限り自動で更新され、"+(ios?'Apple ID':'Google アカウント')+'に請求されます。解約は'+(ios?'「設定」→ 自分の名前 →「サブスクリプション」':'Google Play の「お支払いと定期購入」')+'から。'+(legalHtml()?'<br>'+legalHtml():'')+'</p>');
   box.appendChild(msg);box.appendChild(r);el.appendChild(note)}
 
-window.WK_PRO={get active(){return active},get ready(){return ready},paywall:paywall};
+window.WK_PRO={get active(){return active},get ready(){return ready},get grantUntil(){return grantUntil},paywall:paywall,grant:grant};
 
 // WK_PRO を用意してから状態を流す（受け取る側が WK_PRO.active を読むため）
 if(RC&&apiKey){

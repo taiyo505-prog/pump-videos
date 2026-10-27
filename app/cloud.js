@@ -34,7 +34,7 @@ function sheet(o){return new Promise(function(res){var ov=h('div',{class:'sh'}),
 if(o.input){inp=h('textarea',{class:'gs',rows:'3',maxlength:'500',placeholder:o.input});bx.appendChild(inp)}
 var acts=o.actions||[[o.ok||'OK',true,o.danger]],row=h('div',{class:'shr'});
 function close(v){ov.remove();res(v)}
-row.appendChild(btn(o.cancel||'やめる','hb2 sec',function(){close(false)}));
+if(o.cancel!==false)row.appendChild(btn(o.cancel||'やめる','hb2 sec',function(){close(false)}));
 acts.forEach(function(a){var b=btn(a[0],'hb2'+(a[2]?' dng':''),function(){if(inp){if(!inp.value.trim())return inp.focus();return close(inp.value.trim())}close(a[1])});row.appendChild(b)});
 bx.appendChild(row);ov.appendChild(bx);ov.addEventListener('click',function(e){if(e.target===ov)close(false)});document.body.appendChild(ov);if(inp)inp.focus()})}
 function toast(t){var d=h('div',{class:'toast'});d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.classList.add('on')},10);setTimeout(function(){d.classList.remove('on');setTimeout(function(){d.remove()},300)},2200)}
@@ -226,9 +226,11 @@ body.appendChild(c);markSeen();refresh()}
 async function friendsTab(body){var fr=await api.friendships(),rows=fr.rows,names=fr.names;body.innerHTML='';Object.keys(fr.avatars||{}).forEach(function(k){learn(k,fr.avatars[k])});
 var mc=card('あなたのフレンドコード');mc.appendChild(h('div',{class:'fcode'},esc(me.friend_code)));
 mc.appendChild(h('p',{class:'fn'},'このコードを友達に教えてね。表示名: <b>'+esc(me.display_name)+'</b>（アカウントで変更）'));
-mc.appendChild(btn('招待リンクを送る','hb2',function(){var t='PUMPで友達になろう💪\n'+inviteUrl()+'\nフレンドコード: '+me.friend_code;if(navigator.share)navigator.share({text:t}).catch(function(){});else{try{navigator.clipboard.writeText(t).then(function(){toast('コピーしたよ')},function(){toast(t)})}catch(e){toast(t)}}}));body.appendChild(mc);
+mc.appendChild(h('p',{class:'fn gift'},'🎁 このコードやリンクで友達が始めたら、<b>2人とも PUMP Pro が7日間無料</b>（招待した人は10人分まで）'));
+mc.appendChild(btn('招待リンクを送る','hb2',function(){var t='PUMPで友達になろう💪\nこのリンクかコードで始めると、PUMP Pro が7日間無料🎁\n'+inviteUrl()+'\nフレンドコード: '+me.friend_code;if(navigator.share)navigator.share({text:t}).catch(function(){});else{try{navigator.clipboard.writeText(t).then(function(){toast('コピーしたよ')},function(){toast(t)})}catch(e){toast(t)}}}));body.appendChild(mc);
 var ac=card('友達を追加'),ci=h('input',{class:'gs',placeholder:'フレンドコード（8文字）',autocapitalize:'characters',maxlength:'12'}),am=h('div',{class:'fn'});
-ac.appendChild(ci);ac.appendChild(btn('申請する','hb2',async function(){var c=ci.value.trim();if(c.length<6)return note(am,'コードを入れてね。');var p=await api.findByCode(c);if(!p)return note(am,'見つからなかった。コードを確認してね。');
+ac.appendChild(h('p',{class:'fn'},'招待コードをもらった人は、ここに入れると PUMP Pro 7日間無料🎁（始めてから7日以内）'));
+ac.appendChild(ci);ac.appendChild(btn('申請する','hb2',async function(){var c=ci.value.trim();if(c.length<6)return note(am,'コードを入れてね。');var p=await api.findByCode(c);if(!p)return note(am,'見つからなかった。コードを確認してね。');await claimGift(c);
 if(!await sheet({title:p.display_name+' さんに友達申請する？',ok:'申請する'}))return;try{await api.request(p.id);ci.value='';toast(p.display_name+' さんに申請したよ');friends(root,'friends')}catch(e){note(am,e&&e.code==='23505'?'もう申請済みか、友達だよ。':'申請できなかった。')}}));ac.appendChild(am);body.appendChild(ac);
 function other(r){return r.requester===me.id?r.addressee:r.requester}
 function row(r,actions){var d=h('div',{class:'rk'},avatar(other(r),names[other(r)])+"<span class='rnm'>"+esc(names[other(r)]||'？')+'</span>');actions.forEach(function(a){var b=btn(a[0],'hb2'+(a[2]?' sec':''),a[1]);d.appendChild(b)});return d}
@@ -317,6 +319,8 @@ setName:function(n){return sb.from('profiles').update({display_name:n}).eq('id',
 friendships:async function(){var rows=must(await sb.from('friendships').select('requester,addressee,status,created_at')),ids=rows.map(function(r){return r.requester===uid?r.addressee:r.requester}),names={},avatars={};
 if(ids.length)must(await sb.from('profiles').select('id,display_name,avatar_path').in('id',ids)).forEach(function(p){names[p.id]=p.display_name;avatars[p.id]=pub(p.avatar_path)});return{rows:rows,names:names,avatars:avatars}},
 findByCode:function(c){return sb.rpc('find_by_code',{code:c}).then(function(r){return must(r)[0]||null})},
+claimInvite:function(c){return sb.rpc('claim_invite',{code:c}).then(must)},
+proGrant:function(){return sb.from('pro_grants').select('until').maybeSingle().then(function(r){var d=must(r);return d?new Date(d.until).getTime():0})},
 request:function(id){return sb.from('friendships').insert({requester:uid,addressee:id}).then(must)},
 accept:function(r){return sb.from('friendships').update({status:'accepted'}).eq('requester',r.requester).eq('addressee',r.addressee).then(must)},
 unfriend:function(r){return sb.from('friendships').delete().eq('requester',r.requester).eq('addressee',r.addressee).then(must)},
@@ -360,10 +364,13 @@ api.achieve(d.name,d.value,map[key]).then(function(id){if(!id)return;Object.keys
 
 // ---- ログインしたあと: プッシュ通知の登録と、ログイン前に開いた招待リンク ----
 var pushToken=null,INV='pump-invite';
-function afterLogin(){var N=window.WK_NATIVE,n=new Date();liveBeat(true);syncDays(new Date(n.getFullYear(),n.getMonth()-1,1).getTime());
+function afterLogin(){var N=window.WK_NATIVE,n=new Date();liveBeat(true);loadGrant();syncDays(new Date(n.getFullYear(),n.getMonth()-1,1).getTime());
 if(N&&N.pushRegister&&api.saveToken)N.pushRegister(function(t,pf){pushToken=t;api.saveToken(t,pf).catch(function(){})});
 var c=null;try{c=localStorage.getItem(INV);localStorage.removeItem(INV)}catch(e){}if(!c&&N&&N.takeInvite)c=N.takeInvite();if(c)invite(c)}
 
+// ---- 招待の特典（2人とも PUMP Pro 7日間）。もらえないとき（7日より前に始めた・もう使った）は黙って何もしない ----
+async function claimGift(code){if(!api.claimInvite)return;try{var r=await api.claimInvite(code);if(r&&r.ok){loadGrant();await sheet({title:'🎁 PUMP Pro 7日間無料をゲット！',body:(r.inviter_name||'友達')+' さんの招待の特典だよ。広告なし・シェア画像の色・詳しい統計が使える。招待した人にも7日分が届いたよ。',ok:'やった',cancel:false})}}catch(e){}}
+function loadGrant(){if(!api.proGrant||!window.WK_PRO||!WK_PRO.grant)return;api.proGrant().then(function(u){WK_PRO.grant(u)}).catch(function(){})}
 // ---- 招待リンク ----
 // 送る: 公開ページ（pump-videos の i.html）に名前とコードをつけたリンク。開くとアプリ（pump://invite?c=…）かストアに案内される
 function inviteUrl(){return (cfg.inviteUrl||'https://taiyo505-prog.github.io/pump-videos/i.html')+'?c='+encodeURIComponent(me.friend_code)+'&n='+encodeURIComponent(me.display_name||'')}
@@ -374,6 +381,7 @@ await Promise.race([authReady,new Promise(function(r){setTimeout(r,3000)})]);
 if(!user){try{localStorage.setItem(INV,code)}catch(e){}W.go('friends');toast('ログインすると、招待してくれた人に友達申請できるよ');return}
 if(!me)me=await api.me();if(code===me.friend_code)return;var p=await api.findByCode(code).catch(function(){return null});
 W.go('friends');if(!p){toast('招待のコードが見つからなかった');return}
+await claimGift(code);
 if(await sheet({title:p.display_name+' さんから招待が届いてるよ',body:'友達申請する？承認されたら、お互いの投稿が見られるようになるよ。',ok:'申請する'})){
 try{await api.request(p.id);toast(p.display_name+' さんに申請したよ')}catch(e){toast(e&&e.code==='23505'?'もう申請済みか、友達だよ':'申請できなかった')}}
 friends($('fl'),'friends')}
