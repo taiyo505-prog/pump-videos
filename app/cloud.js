@@ -59,7 +59,7 @@ step2.appendChild(code);step2.appendChild(btn('ログイン','hb2',function(){va
 
 // ---- 友達ページ（タブ: フィード / ランキング / お知らせ / 友達） ----
 var root=null;
-async function friends(el,t){root=el;if(t)tab=t;el.innerHTML='';
+async function friends(el,t){root=el;if(t)tab=t;el.innerHTML='';if(user)await Promise.race([loadBadges(),new Promise(function(r){setTimeout(r,1500)})]);
 if(demo)el.appendChild(h('div',{class:'demo'},'デモ: 見本の友達とデータで動いてるよ。アプリ版では本物の友達とつながる。'));
 if(!user){var intro=card();intro.innerHTML="<b>友達と記録を見せ合おう</b><p class='fn'>トレーニング後に写真つきで投稿すると、友達のフィードに載るよ。いいね・コメントで応援し合えて、毎週のランキングもある。見られるのは承認した友達だけ。</p>";el.appendChild(intro);signIn(el,function(){friends(el)});return}
 if(!me)me=await api.me();learn(me.id,me.avatar_url);
@@ -181,7 +181,7 @@ if(nc)openComments(false);
 return c}
 
 async function profile(uid,name){var el=root;el.innerHTML='';var top=h('div',{class:'prof'});top.appendChild(btn('‹ もどる','hb2 sec',function(){friends(el)}));
-top.appendChild(h('div',{class:'prh'},avatar(uid,name,64)+'<div><b>'+esc(name)+"</b><span class='fn' id='prs'>読み込み中…</span></div>"));el.appendChild(top);
+top.appendChild(h('div',{class:'prh'},avatar(uid,name,64)+'<div><b>'+esc(name)+'</b>'+(badgeHtml(uid,true)?"<span class='bdgs'>"+badgeHtml(uid,true)+'</span>':'')+"<span class='fn' id='prs'>読み込み中…</span></div>"));el.appendChild(top);
 var body=h('div');el.appendChild(body);await feedTab(body,uid);
 var ws=weekStart(),mine=(await api.feed({user:uid,since:ws,noPhotos:true,limit:100})),all=body.querySelectorAll('.post2').length;
 $('prs').textContent='投稿 '+all+'件 · 今週 '+mine.length+'回 · '+mine.reduce(function(a,p){return a+ +p.sets},0)+'セット'}
@@ -196,7 +196,7 @@ var list=Object.keys(by).map(function(k){return by[k]}).sort(function(a,b){retur
 var sp=await sponsors('ranking');body.innerHTML='';
 var c=card('今週のランキング');c.appendChild(h('p',{class:'fn'},'月曜から今日までの、写真つき投稿の集計。'+(sp[0]?' presented by <b>'+esc(sp[0].name)+'</b>':'')));
 var sw=h('div',{class:'tabs'});[['count','トレーニング回数'],['vol','総ボリューム']].forEach(function(x){sw.appendChild(btn(x[1],rankBy===x[0]?'on':'',function(){rankBy=x[0];rankTab(body)}))});c.appendChild(sw);c.insertBefore(periodTabs(body),c.firstChild.nextSibling);
-list.forEach(function(r,i){var medal=['🥇','🥈','🥉'][i]||(i+1);c.appendChild(h('div',{class:'rk'+(r.id===me.id?' mine':'')},"<span class='rn2'>"+medal+'</span>'+avatar(r.id,r.name)+"<span class='rnm'>"+esc(r.name)+(r.id===me.id&&r.name!=='あなた'?'（あなた）':'')+"</span><b>"+(rankBy==='count'?r.count+'回':Math.round(r.vol).toLocaleString()+'kg')+'</b>'))});
+list.forEach(function(r,i){var medal=['🥇','🥈','🥉'][i]||(i+1);c.appendChild(h('div',{class:'rk'+(r.id===me.id?' mine':'')},"<span class='rn2'>"+medal+'</span>'+avatar(r.id,r.name)+"<span class='rnm'>"+esc(r.name)+badgeHtml(r.id)+(r.id===me.id&&r.name!=='あなた'?'（あなた）':'')+"</span><b>"+(rankBy==='count'?r.count+'回':Math.round(r.vol).toLocaleString()+'kg')+'</b>'))});
 if(list.length<2)c.appendChild(h('p',{class:'fn'},'友達を追加すると、ここで競い合えるよ。'));
 body.appendChild(c)}
 
@@ -226,10 +226,11 @@ body.appendChild(c);markSeen();refresh()}
 async function friendsTab(body){var fr=await api.friendships(),rows=fr.rows,names=fr.names;body.innerHTML='';Object.keys(fr.avatars||{}).forEach(function(k){learn(k,fr.avatars[k])});
 var mc=card('あなたのフレンドコード');mc.appendChild(h('div',{class:'fcode'},esc(me.friend_code)));
 mc.appendChild(h('p',{class:'fn'},'このコードを友達に教えてね。表示名: <b>'+esc(me.display_name)+'</b>（アカウントで変更）'));
-mc.appendChild(h('p',{class:'fn gift'},'🎁 このコードやリンクで友達が始めたら、<b>2人とも PUMP Pro が7日間無料</b>（招待した人は10人分まで）'));
-mc.appendChild(btn('招待リンクを送る','hb2',function(){var t='PUMPで友達になろう💪\nこのリンクかコードで始めると、PUMP Pro が7日間無料🎁\n'+inviteUrl()+'\nフレンドコード: '+me.friend_code;if(navigator.share)navigator.share({text:t}).catch(function(){});else{try{navigator.clipboard.writeText(t).then(function(){toast('コピーしたよ')},function(){toast(t)})}catch(e){toast(t)}}}));body.appendChild(mc);
+mc.appendChild(h('p',{class:'fn gift'},'🎁 このコードやリンクで始めた友達は <b>PUMP Pro 14日間無料</b>。あなたにも、招待した人数に応じて特典が届くよ。'));
+var ip=h('div',{class:'ivp'});mc.appendChild(ip);inviteProgress(ip);
+mc.appendChild(btn('招待リンクを送る','hb2',function(){var t='PUMPで友達になろう💪\nこのリンクかコードで始めると、PUMP Pro が14日間無料🎁\n'+inviteUrl()+'\nフレンドコード: '+me.friend_code;if(navigator.share)navigator.share({text:t}).catch(function(){});else{try{navigator.clipboard.writeText(t).then(function(){toast('コピーしたよ')},function(){toast(t)})}catch(e){toast(t)}}}));body.appendChild(mc);
 var ac=card('友達を追加'),ci=h('input',{class:'gs',placeholder:'フレンドコード（8文字）',autocapitalize:'characters',maxlength:'12'}),am=h('div',{class:'fn'});
-ac.appendChild(h('p',{class:'fn'},'招待コードをもらった人は、ここに入れると PUMP Pro 7日間無料🎁（始めてから7日以内）'));
+ac.appendChild(h('p',{class:'fn'},'招待コードをもらった人は、ここに入れると PUMP Pro 14日間無料🎁（始めてから7日以内）'));
 ac.appendChild(ci);ac.appendChild(btn('申請する','hb2',async function(){var c=ci.value.trim();if(c.length<6)return note(am,'コードを入れてね。');var p=await api.findByCode(c);if(!p)return note(am,'見つからなかった。コードを確認してね。');await claimGift(c);
 if(!await sheet({title:p.display_name+' さんに友達申請する？',ok:'申請する'}))return;try{await api.request(p.id);ci.value='';toast(p.display_name+' さんに申請したよ');friends(root,'friends')}catch(e){note(am,e&&e.code==='23505'?'もう申請済みか、友達だよ。':'申請できなかった。')}}));ac.appendChild(am);body.appendChild(ac);
 function other(r){return r.requester===me.id?r.addressee:r.requester}
@@ -320,6 +321,9 @@ friendships:async function(){var rows=must(await sb.from('friendships').select('
 if(ids.length)must(await sb.from('profiles').select('id,display_name,avatar_path').in('id',ids)).forEach(function(p){names[p.id]=p.display_name;avatars[p.id]=pub(p.avatar_path)});return{rows:rows,names:names,avatars:avatars}},
 findByCode:function(c){return sb.rpc('find_by_code',{code:c}).then(function(r){return must(r)[0]||null})},
 claimInvite:function(c){return sb.rpc('claim_invite',{code:c}).then(must)},
+inviteCount:function(){return sb.rpc('invite_count').then(must)},
+checkBuddy:function(){return sb.rpc('check_buddy').then(must)},
+badges:function(){return sb.from('user_badges').select('user_id,badge').then(must)},
 proGrant:function(){return sb.from('pro_grants').select('until').maybeSingle().then(function(r){var d=must(r);return d?new Date(d.until).getTime():0})},
 request:function(id){return sb.from('friendships').insert({requester:uid,addressee:id}).then(must)},
 accept:function(r){return sb.from('friendships').update({status:'accepted'}).eq('requester',r.requester).eq('addressee',r.addressee).then(must)},
@@ -355,7 +359,8 @@ document.addEventListener('wk:end',function(){liveT=0;if(user&&api.live)api.live
 setInterval(function(){if(document.visibilityState!=='hidden')liveBeat()},300000);
 // トレーニングした日とその日のセット数（月間バトル用）
 function dayRows(since){var c={};(W.data||[]).forEach(function(e){if(e.t>=since){var k=ymd(e.t);c[k]=(c[k]||0)+1}});return Object.keys(c).map(function(k){return{day:k,sets:c[k]}})}
-function syncDays(since){if(!user||!api.saveDays)return;var r=dayRows(since);if(r.length)api.saveDays(r).catch(function(){})}
+function syncDays(since){if(!user||!api.saveDays)return Promise.resolve();var r=dayRows(since);return r.length?api.saveDays(r).catch(function(){}):Promise.resolve()}
+document.addEventListener('wk:done',function(){if(!user)return;var t0=new Date();t0.setDate(t0.getDate()-7);t0.setHours(0,0,0,0);syncDays(t0.getTime()).then(buddyCheck)});
 // 自己ベストのお知らせ: 同じ日・同じ種目でまた更新したら書き換える
 var ACH='pump-ach-v1';
 document.addEventListener('wk:record',function(e){var d=e.detail||{};if(!user)return;liveBeat();var t0=new Date();t0.setHours(0,0,0,0);syncDays(t0.getTime());
@@ -364,12 +369,27 @@ api.achieve(d.name,d.value,map[key]).then(function(id){if(!id)return;Object.keys
 
 // ---- ログインしたあと: プッシュ通知の登録と、ログイン前に開いた招待リンク ----
 var pushToken=null,INV='pump-invite';
-function afterLogin(){var N=window.WK_NATIVE,n=new Date();liveBeat(true);loadGrant();syncDays(new Date(n.getFullYear(),n.getMonth()-1,1).getTime());
+function afterLogin(){var N=window.WK_NATIVE,n=new Date();liveBeat(true);loadGrant();loadBadges();syncDays(new Date(n.getFullYear(),n.getMonth()-1,1).getTime());
 if(N&&N.pushRegister&&api.saveToken)N.pushRegister(function(t,pf){pushToken=t;api.saveToken(t,pf).catch(function(){})});
 var c=null;try{c=localStorage.getItem(INV);localStorage.removeItem(INV)}catch(e){}if(!c&&N&&N.takeInvite)c=N.takeInvite();if(c)invite(c)}
 
 // ---- 招待の特典（2人とも PUMP Pro 7日間）。もらえないとき（7日より前に始めた・もう使った）は黙って何もしない ----
-async function claimGift(code){if(!api.claimInvite)return;try{var r=await api.claimInvite(code);if(r&&r.ok){loadGrant();await sheet({title:'🎁 PUMP Pro 7日間無料をゲット！',body:(r.inviter_name||'友達')+' さんの招待の特典だよ。広告なし・シェア画像の色・詳しい統計が使える。招待した人にも7日分が届いたよ。',ok:'やった',cancel:false})}}catch(e){}}
+async function claimGift(code){if(!api.claimInvite)return;try{var r=await api.claimInvite(code);if(r&&r.ok){loadGrant();await sheet({title:'🎁 PUMP Pro 14日間無料をゲット！',body:(r.inviter_name||'友達')+' さんの招待の特典だよ。広告なし・シェア画像の色・詳しい統計が使える。\n\n🤝 さらに、'+(r.inviter_name||'招待してくれた人')+' さんと2人とも1週間で3日トレーニングすると、2人とも +7日（バディ特典）。',ok:'やった',cancel:false})}}catch(e){}}
+// 招待した人数で増える特典（DB の claim_invite と同じ段階）
+var TIERS=[[1,'PUMP Pro 7日'],[3,'PUMP Pro 1か月'],[5,'バッジ「勧誘マスター」＋限定カラー'],[10,'PUMP Pro 3か月']];
+async function inviteProgress(el){if(!api.inviteCount)return;var n=0,bd=null;try{n=await api.inviteCount()}catch(e){return}try{bd=api.checkBuddy?await api.checkBuddy():null}catch(e){}
+var nx=TIERS.filter(function(t){return n<t[0]})[0],prev=TIERS.filter(function(t){return n>=t[0]}).pop(),from=prev?prev[0]:0;
+var hd="<div class='ivh'><b>招待した人数 "+n+'人</b>'+(nx?'<span>あと'+(nx[0]-n)+'人で '+esc(nx[1])+'</span>':'<span>全部の特典をゲット！🎉</span>')+'</div>';
+var bar=nx?"<div class='ivb'><i style='width:"+Math.round((n-from)/(nx[0]-from)*100)+"%'></i></div>":'';
+var ls="<div class='ivl'>"+TIERS.map(function(t){return "<div class='"+(n>=t[0]?'ok':'')+"'><span>"+(n>=t[0]?'✅':'🔒')+' '+t[0]+'人</span><span>'+esc(t[1])+'</span></div>'}).join('')+'</div>';
+var bu='';if(bd&&bd.pairs&&bd.pairs.length)bu="<div class='ivy'><b>🤝 バディ特典</b><span class='fn'>2人とも直近7日で3日トレーニングすると、2人とも PUMP Pro +7日（1組1回）</span>"+bd.pairs.map(function(p){return '<div>'+esc(p.name)+' さんと: '+(p.done?'✅ もらった':'あなた '+Math.min(3,p.me_days)+'/3日・相手 '+p.partner_days+'/3日')+'</div>'}).join('')+'</div>';
+el.innerHTML=hd+bar+ls+bu}
+// バッジ（自分と友達の分）。BADGES[ユーザーID] = ['founder', ...]
+var BADGES={},BNAME={founder:['🏅','創設メンバー'],recruiter:['📣','勧誘マスター']};
+function loadBadges(){if(!api.badges)return Promise.resolve();return api.badges().then(function(rs){BADGES={};rs.forEach(function(r){(BADGES[r.user_id]=BADGES[r.user_id]||[]).push(r.badge)});window.WK_BADGES=me&&BADGES[me.id]||[];try{document.dispatchEvent(new CustomEvent('wk:badges'))}catch(e){}}).catch(function(){})}
+function badgeHtml(id,full){return (BADGES[id]||[]).map(function(b){var x=BNAME[b];return x?"<span class='bdg "+b+"' title='"+x[1]+"'>"+x[0]+(full?' '+x[1]:'')+'</span>':''}).join('')}
+// トレーニングが終わったら、バディ特典を確かめる
+function buddyCheck(){if(!user||!api.checkBuddy)return;api.checkBuddy().then(function(r){if(r&&r.rewarded&&r.rewarded.length){loadGrant();sheet({title:'🤝 バディ特典 PUMP Pro +7日！',body:r.rewarded.join('・')+' さんと2人で、1週間に3日トレーニング達成。2人とも7日分もらえたよ。',ok:'やった',cancel:false})}}).catch(function(){})}
 function loadGrant(){if(!api.proGrant||!window.WK_PRO||!WK_PRO.grant)return;api.proGrant().then(function(u){WK_PRO.grant(u)}).catch(function(){})}
 // ---- 招待リンク ----
 // 送る: 公開ページ（pump-videos の i.html）に名前とコードをつけたリンク。開くとアプリ（pump://invite?c=…）かストアに案内される
