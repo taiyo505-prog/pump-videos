@@ -400,7 +400,7 @@ img.av{object-fit:cover;background:#222}
 .tabs{display:flex;gap:6px;margin:0 0 10px}
 .tabs button{flex:1;border:1px solid var(--line);background:none;border-radius:999px;padding:6px 0;font-size:13px;color:var(--sub)}
 .tabs button.on{border-color:var(--acc);color:var(--acc);font-weight:700}
-.lock{position:relative}
+.lock{position:relative;min-height:250px}
 .lock .lk{filter:blur(5px);opacity:.5;pointer-events:none;user-select:none}
 .lock .lc{position:absolute;inset:44px 12px 12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;text-align:center}
 .thm{display:flex;gap:10px;justify-content:center;align-items:center;margin:4px 0 10px;flex-wrap:wrap}
@@ -408,7 +408,7 @@ img.av{object-fit:cover;background:#222}
 .thm button.on{border-color:#fff}
 .thm button i{position:absolute;right:-6px;top:-6px;font-style:normal;font-size:11px}
 .thm span{font-size:12px;color:#aab}
-.vb{display:flex;align-items:flex-end;gap:4px;height:120px;margin:6px 0 2px}
+.gl{display:flex;flex-direction:column;gap:2px;padding:8px 0;border-top:1px solid var(--line)}.gl:first-of-type{border-top:0}.gl .acc{color:var(--acc);font-size:18px}.bal{display:grid;grid-template-columns:72px 1fr 72px;align-items:center;gap:8px;margin:8px 0;font-size:13px;font-weight:700}.bal span:last-child{text-align:right}.bal div{height:10px;border-radius:5px;background:#3a3d46;overflow:hidden}.bal i{display:block;height:100%;background:var(--acc)}.vb{display:flex;align-items:flex-end;gap:4px;height:120px;margin:6px 0 2px}
 .vb div{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;min-width:0}
 .vb i{display:block;width:100%;background:var(--acc);border-radius:4px 4px 0 0;min-height:2px}
 .vb span{font-size:10px;color:var(--sub);margin-top:3px}
@@ -745,6 +745,37 @@ function roundW(w,name){var st=kind(name)==='db'?1:2.5;return Math.max(st,Math.r
 function prEvents(){var best={},out=[];data.slice().sort(function(a,b){return a.t-b.t}).forEach(function(e){if(best[e.name]&&e.e1>best[e.name]+1e-9)out.push(e);if(!best[e.name]||e.e1>best[e.name])best[e.name]=e.e1});return out}
 function lastTrained(){var l={};data.forEach(function(e){var g=groupOf(e.name);if(g&&(!l[g]||e.t>l[g]))l[g]=e.t});return l}
 function weekStats(from,to){var es=data.filter(function(e){return e.t>from&&e.t<=to}),days={},g={},v=0;es.forEach(function(e){days[dkey(e.t)]=1;v+=vol(e);var x=groupOf(e.name);if(x)g[x]=(g[x]||0)+1});return{es:es,days:Object.keys(days).length,groups:g,vol:v}}
+// ---- Pro の分析カード。無料の人には中身をぼかして、何がわかるかの説明を出す ----
+function proCard(title,desc,inner){if(isPro())return "<div class='day gc'><h2>"+title+"<span class='pb'>PRO</span></h2>"+inner+'</div>';
+ return "<div class='day gc lock'><h2>"+title+"<span class='pb'>PRO</span></h2><div class='lk'>"+inner+"</div><div class='lc'><b>🔒 PUMP Pro で見られる</b><span class='fn'>"+desc+"</span><button class='hb2' data-go='pro'>PUMP Pro を見る</button></div></div>"}
+// 種目ごとの「その日のいちばん良いセット」
+function dayBests(name,from){var by={};data.forEach(function(e){if(e.name!==name||e.bw||!(e.w>0)||(from&&e.t<from))return;var k=dkey(e.t);if(!by[k]||e.e1>by[k].e1)by[k]=e});return Object.keys(by).map(function(k){return by[k]}).sort(function(a,b){return a.t-b.t})}
+function mainLifts(n){var cnt={};data.forEach(function(e){if(!e.bw&&e.w>0)cnt[e.name]=(cnt[e.name]||0)+1});return Object.keys(cnt).sort(function(a,b){return cnt[b]-cnt[a]}).slice(0,n)}
+// 🎯 次回のおすすめ重量（前回のいちばん重いセットから）
+function nextCard(){var rows=mainLifts(5).map(function(n){var db=dayBests(n);if(db.length<1)return '';var last=db[db.length-1],step=kind(n)==='db'?2:2.5,w=last.w,r=last.reps,nw,nr,why;
+  if(r>=10){nw=w+step;nr=8;why='10回できたから重さアップ'}else if(r>=6){nw=w;nr=r+1;why='同じ重さで1回ふやす'}else{nw=w;nr=Math.max(r,5);why='まずは同じ重さで回数を'}
+  return '<tr><td>'+esc(n)+"</td><td class='fn'>"+r1(w)+'kg×'+r+'</td><td><b>'+r1(nw)+'kg×'+nr+"</b><br><span class='fn'>"+why+'</span></td></tr>'}).join('');
+ return proCard('🎯 次回のおすすめ重量','よくやる種目ごとに、前回の記録から「次は何kgで何回」を出すよ。迷わず少しずつ重くしていける。',rows?'<table><tr><th>種目</th><th>前回</th><th>次回</th></tr>'+rows+'</table>':"<p class='fn'>記録がたまると、ここに次回の重さが出るよ。</p>")}
+// 📈 自己ベストの到達予測（直近90日の伸びから）
+function goalCard(){var now=Date.now(),out=mainLifts(4).map(function(n){var db=dayBests(n,now-90*D);if(db.length<4)return '';
+  var xs=db.map(function(e){return (e.t-now)/D}),ys=db.map(function(e){return e.e1}),k=xs.length,mx=xs.reduce(function(a,b){return a+b},0)/k,my=ys.reduce(function(a,b){return a+b},0)/k,sxy=0,sxx=0;
+  for(var i=0;i<k;i++){sxy+=(xs[i]-mx)*(ys[i]-my);sxx+=(xs[i]-mx)*(xs[i]-mx)}var sl=sxx?sxy/sxx:0,best=Math.max.apply(null,ys),cur=my-sl*mx;
+  if(sl<=0.01)return "<div class='gl'><b>"+esc(n)+"</b><span class='fn'>いまの推定1RM "+r1(best)+'kg。最近は横ばい。重さか回数を少し変えてみよう。</span></div>';
+  var tg=Math.ceil((best+1)/10)*10,dd=Math.max(1,Math.round((tg-Math.max(cur,best))/sl)),d=new Date(now+dd*D);
+  return "<div class='gl'><b>"+esc(n)+"</b><span><b class='acc'>"+tg+'kg</b> まで あと約'+(dd<14?dd+'日':Math.round(dd/7)+'週')+'（'+(d.getMonth()+1)+'月'+d.getDate()+"日ごろ）</span><span class='fn'>いまの推定1RM "+r1(best)+'kg・1か月で +'+r1(sl*30)+'kg のペース</span></div>'}).join('');
+ return proCard('📈 自己ベストの到達予測','最近の伸び方から「ベンチ100kgまであと何週」みたいに、次の目標に届く日を予想するよ。',out||"<p class='fn'>同じ種目を90日の間に4日以上記録すると、ここに予測が出るよ。</p>")}
+// ⚖️ 部位のバランス診断（直近30日）
+function balanceCard(){var w=weekStats(Date.now()-30*D,Date.now()).groups,g=function(k){return w[k]||0},push=g('胸')+g('肩'),pull=g('背中'),up=push+pull+g('腕'),low=g('脚');
+ function bar(a,b,la,lb){var t=a+b,pa=t?Math.round(a/t*100):50;return "<div class='bal'><span>"+la+' '+a+"</span><div><i style='width:"+pa+"%'></i></div><span>"+b+' '+lb+'</span></div>'}
+ var tips=[];if(push+pull>=6){if(push>pull*1.5)tips.push('押す種目（胸・肩）が多め。背中を増やすと姿勢と肩のケガ予防にいいよ。');else if(pull>push*1.5)tips.push('背中が多め。胸や肩の日も入れるとバランスが良くなるよ。')}
+ if(up+low>=8){if(low<up*0.3)tips.push('脚が少なめ。脚は体でいちばん大きい筋肉やから、やると代謝も上がるよ。')}
+ if(!tips.length)tips.push(push+pull+low?'いいバランス。この調子でいこう。':'記録がたまると、ここで診断するよ。');
+ return proCard('⚖️ 部位のバランス診断','押す・引く、上半身・下半身のバランスを見て、足りない部位を教えるよ。ケガの予防にも。',bar(push,pull,'押す','引く')+bar(up,low,'上半身','下半身')+"<p class='fn'>直近30日のセット数。"+tips.join('')+'</p>')}
+// 📊 12週間の推移（週ごとのセット数とトレーニング日数）
+function trendCard(){var now=dayStart(Date.now())+D,ws=[],i;for(i=11;i>=0;i--){var x=weekStats(now-(i+1)*7*D,now-i*7*D);ws.push({s:x.es.length,d:x.days})}
+ var mx=Math.max.apply(null,ws.map(function(x){return x.s}).concat([1])),act=ws.filter(function(x){return x.s}),avg=act.length?Math.round(act.reduce(function(a,x){return a+x.d},0)/act.length*10)/10:0,top=Math.max.apply(null,ws.map(function(x){return x.s}));
+ var bars="<div class='vb'>"+ws.map(function(x,k){return "<div><i style='height:"+Math.round(x.s/mx*100)+"%'></i><span>"+(k===11?'今週':x.d+'日')+'</span></div>'}).join('')+'</div>';
+ return proCard('📊 12週間の推移','週ごとのセット数とトレーニング日数を3か月分ならべて、ペースが上がってるか落ちてるかがわかるよ。',bars+"<p class='fn'>棒はその週のセット数、下の数字はトレーニングした日数。いちばん多い週 "+top+'セット・平均 週'+avg+'日。</p>')}
 function report(){if(!data.length)return 'まだ記録がないよ。トレーニングを記録すると、ここで分析するよ。';
 var now=Date.now(),w1=weekStats(now-7*D,now),w0=weekStats(now-14*D,now-7*D),out=[];
 out.push('直近7日: '+w1.days+'回・'+w1.es.length+'セット'+(w0.es.length>0?'（前の週比 '+(w1.es.length>=w0.es.length?'+':'')+(w1.es.length-w0.es.length)+'セット）':''));
@@ -1042,10 +1073,10 @@ function recapCard(){return "<div class='day gc'><h2>📅 月間まとめ</h2><d
 
 function showStats(){var days={};data.forEach(function(e){days[dkey(e.t)]=1});
 var now=Date.now();
-var h="<div class='day gc'><h2>📋 コーチの週間レポート</h2><div class='cw'>"+esc(report())+"</div></div>"+mapCard()+recapCard();
+var h="<div class='day gc'><h2>📋 コーチの週間レポート</h2><div class='cw'>"+esc(report())+"</div></div>"+mapCard()+nextCard()+goalCard()+recapCard();
 h+="<div class='day gc'><h2>累計</h2><div class='kv'><div><b>"+Object.keys(days).length+"</b><span>トレーニング日数</span></div><div><b>"+data.length+"</b><span>セット</span></div></div></div>";
 h+="<div class='day gc' id='gpc'>"+groupCard()+"</div>";
-h+=monthCard();
+h+=balanceCard()+trendCard()+monthCard();
 var bp=body.filter(function(b){return b.w>0});h+="<div class='day gc'><h2>体重の推移</h2>"+(bp.length>=2?lineChart(bp.map(function(b){return{t:b.t,v:b.w}}),'kg'):"<div class='fn'>設定やチャット（例: 体重 64.5）で体重を更新すると、ここに推移が出るよ。</div>")+"<button class='hb2' data-go='settings'>体重・身長を更新</button></div>";
 h+="<div id='g1'></div>";
 var pl=prList();h+="<div class='day gc'><h2>自己ベスト（推定1RM）</h2>"+(pl.length?'<table><tr><th>種目</th><th>1RM</th><th>記録</th></tr>'+pl.map(function(e){return '<tr><td>'+esc(e.name)+'</td><td>'+r1(e.e1)+'kg</td><td>'+esc(setStr(e))+'<br><span class="fn">'+md(e.t)+'</span></td></tr>'}).join('')+'</table>':"<div class='fn'>まだ記録がないよ。</div>")+'</div>';
