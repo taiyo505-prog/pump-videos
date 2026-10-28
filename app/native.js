@@ -27,7 +27,7 @@ document.addEventListener('wk:restend',cancelRest);
 // ホーム・履歴・統計・友達など、全画面ページが前に出ているときだけ表示する。
 var A=P.AdMob,adReady=false,adShown=false,adLoaded=false,adH=0;
 function setAdH(h){document.documentElement.style.setProperty('--ad-h',(h||0)+'px')}
-function wantAd(){var q=function(s){return document.querySelector(s)};if(window.WK_PRO&&window.WK_PRO.active)return false;if(q('#ov.on')||q('#sv.on')||q('#dr.on'))return false;return !!(q('#st.on')||q('.pg.on'))}
+function wantAd(){var q=function(s){return document.querySelector(s)};if(window.WK_PRO&&window.WK_PRO.active)return false;if(q('#ov.on')||q('#sv.on')||q('#dr.on')||q('.sh'))return false;return !!(q('#st.on')||q('.pg.on'))}
 function syncAd(){if(!adReady)return;var w=wantAd();if(w===adShown)return;adShown=w;
 if(w){if(adLoaded)setAdH(adH);(adLoaded?A.resumeBanner():A.showBanner({adId:ios?cfg.admob.bannerIos:cfg.admob.bannerAndroid,adSize:'ADAPTIVE_BANNER',position:'BOTTOM_CENTER',margin:0,isTesting:!!cfg.admob.testing})).then(function(){adLoaded=true}).catch(function(){adShown=false})}
 else{setAdH(0);A.hideBanner().catch(function(){})}}
@@ -40,7 +40,7 @@ att.then(function(){return A.requestConsentInfo()}).then(function(info){if(info.
 .then(function(){return A.initialize({initializeForTesting:!!cfg.admob.testing})})
 .then(function(){adReady=true;syncAd()}).catch(function(){});
 document.addEventListener('wk:pro',syncAd);
-new MutationObserver(syncAd).observe(document.body,{subtree:true,attributes:true,attributeFilter:['class']})}
+new MutationObserver(syncAd).observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['class']})}
 // 設定画面から「広告の同意を変更」を開けるようにする（EU などで必要）
 // ---- 画像・動画の共有（いったん端末の一時フォルダに書いてから、共有シートを開く） ----
 function shareFile(blob,name,text){var FS=P.Filesystem,SH=P.Share;if(!FS||!SH||!blob)return Promise.resolve(false);
