@@ -188,7 +188,7 @@ $('prs').textContent='投稿 '+all+'件 · 今週 '+mine.length+'回 · '+mine.r
 
 var rankPeriod='week';
 function ymd(t){var d=new Date(t);return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2)}
-async function rankTab(body){if(rankPeriod==='month'&&api.monthDays)return monthTab(body);var ws=weekStart(),ps=await api.feed({since:ws,noPhotos:true,limit:500}),fr=await api.friendships(),by={};Object.keys(fr.avatars||{}).forEach(function(k){learn(k,fr.avatars[k])});ps.forEach(function(p){learn(p.user_id,p.avatar)});
+async function rankTab(body){if(rankPeriod==='month'&&api.monthDays)return monthTab(body);if(rankPeriod==='nation'&&api.nationalRank)return nationalTab(body);var ws=weekStart(),ps=await api.feed({since:ws,noPhotos:true,limit:500}),fr=await api.friendships(),by={};Object.keys(fr.avatars||{}).forEach(function(k){learn(k,fr.avatars[k])});ps.forEach(function(p){learn(p.user_id,p.avatar)});
 function add(id,name){if(!by[id])by[id]={id:id,name:name,count:0,vol:0}}
 add(me.id,me.display_name);fr.rows.filter(function(r){return r.status==='accepted'}).forEach(function(r){var o=r.requester===me.id?r.addressee:r.requester;add(o,fr.names[o]||'？')});
 ps.forEach(function(p){add(p.user_id,p.name);by[p.user_id].count++;by[p.user_id].vol+=+p.volume_kg});
@@ -200,8 +200,31 @@ list.forEach(function(r,i){var medal=['🥇','🥈','🥉'][i]||(i+1);c.appendCh
 if(list.length<2)c.appendChild(h('p',{class:'fn'},'友達を追加すると、ここで競い合えるよ。'));
 body.appendChild(c)}
 
-function periodTabs(body){var t=h('div',{class:'tabs rpt'});[['week','今週'],['month','今月のバトル👑']].forEach(function(x){if(x[0]==='month'&&!api.monthDays)return;t.appendChild(btn(x[1],rankPeriod===x[0]?'on':'',function(){rankPeriod=x[0];rankTab(body)}))});return t}
+function periodTabs(body){var t=h('div',{class:'tabs rpt'});[['week','今週'],['month','今月のバトル👑'],['nation','全国🇯🇵']].forEach(function(x){if(x[0]==='month'&&!api.monthDays||x[0]==='nation'&&!api.nationalRank)return;t.appendChild(btn(x[1],rankPeriod===x[0]?'on':'',function(){rankPeriod=x[0];rankTab(body)}))});return t}
 // 今月のバトル: 友達どうしで「今月トレーニングした日数」を競う。先月いちばん多かった人がチャンピオン👑
+// ---- 全国ランキング（アプリを使っている全員。主要6種目の推定1RM） ----
+var RANK_EX=['ベンチプレス','スクワット','デッドリフト','ショルダープレス','ラットプルダウン','レッグプレス'],rankEx=RANK_EX[0];
+async function nationalTab(body){var r=await api.nationalRank(rankEx);body.innerHTML='';
+var c=card('全国ランキング');c.appendChild(periodTabs(body));
+var ex=h('div',{class:'tabs nex'});RANK_EX.forEach(function(n){ex.appendChild(btn(n,rankEx===n?'on':'',function(){rankEx=n;nationalTab(body)}))});c.appendChild(ex);
+c.appendChild(h('p',{class:'fn'},'PUMPを使っている全員の自己ベスト（推定1RM）で比べるよ。体重や年齢は考えない、ガチの重さ勝負。'));
+if(me.rank_optout)c.appendChild(h('div',{class:'nme'},'全国ランキングに参加していないよ（下の設定で参加できる）'));
+else if(r.me)c.appendChild(h('div',{class:'nme'},"<span>あなたの順位</span><b>"+r.me.rank.toLocaleString()+'位</b><span>'+r.total.toLocaleString()+'人中・<em>上位'+r.me.top_pct+'%</em></span><span>推定1RM '+Math.round(r.me.e1rm*10)/10+'kg</span>'));
+else c.appendChild(h('div',{class:'nme'},esc(rankEx)+' を記録すると、ここに全国の順位が出るよ'));
+if(!r.top.length)c.appendChild(h('p',{class:'fn'},'まだ誰も記録してないよ。1位のチャンス！'));
+r.top.forEach(function(x){var medal=['🥇','🥈','🥉'][x.rank-1]||x.rank,id='n'+x.rank+'_'+(x.me?'me':''),av=x.avatar?pub(x.avatar):'';if(x.me)learn(me.id,me.avatar_url);else if(av)learn(id,av);
+ c.appendChild(h('div',{class:'rk'+(x.me?' mine':'')},"<span class='rn2'>"+medal+'</span>'+avatar(x.me?me.id:id,x.name)+"<span class='rnm'>"+esc(x.name)+(x.me?'（あなた）':'')+'</span><b>'+Math.round(x.e1rm*10)/10+'kg</b>'))});
+if(r.total>r.top.length)c.appendChild(h('p',{class:'fn'},'上位'+r.top.length+'人まで表示。'));
+body.appendChild(c);
+var st=card('全国ランキングの設定'),nm=h('label',{class:'fn tg'},"<input type='checkbox'"+(me.rank_name?' checked':'')+'><span>名前とトプ画を出す（オフのときは「匿名のトレーニー」で表示）</span>'),oo=h('label',{class:'fn tg'},"<input type='checkbox'"+(me.rank_optout?' checked':'')+'><span>全国ランキングに参加しない</span>');
+function save(){var o={rank_name:nm.querySelector('input').checked,rank_optout:oo.querySelector('input').checked};api.setRankPrefs(o).then(function(){me.rank_name=o.rank_name;me.rank_optout=o.rank_optout;toast('保存したよ');nationalTab(body)}).catch(function(){toast('保存できなかった')})}
+nm.querySelector('input').addEventListener('change',save);oo.querySelector('input').addEventListener('change',save);st.appendChild(nm);st.appendChild(oo);body.appendChild(st)}
+// 主要6種目の自己ベストを送る（上がったときだけ）
+var BUP='pump-bests-up';
+function syncBests(){if(!user||!api.saveBests||!W.data)return;var key=BUP+'-'+user.id,up={};try{up=JSON.parse(localStorage.getItem(key)||'{}')}catch(e){}var best={};
+W.data.forEach(function(e){if(RANK_EX.indexOf(e.name)<0||e.bw||!(e.w>0)||!(e.reps>=1&&e.reps<=30)||!(e.e1>0))return;if(!best[e.name]||e.e1>best[e.name].e1)best[e.name]=e});
+var rows=Object.keys(best).filter(function(n){return !(up[n]>=best[n].e1-1e-6)}).map(function(n){var e=best[n];return{exercise:n,e1rm:Math.round(e.e1*10)/10,weight:Math.min(e.w,Math.round(e.e1*10)/10),reps:e.reps,at:new Date(e.t).toISOString()}});
+if(!rows.length)return;api.saveBests(rows).then(function(){rows.forEach(function(x){up[x.exercise]=x.e1rm});try{localStorage.setItem(key,JSON.stringify(up))}catch(e){}}).catch(function(){})}
 async function monthTab(body){var n=new Date(),a=new Date(n.getFullYear(),n.getMonth(),1),b=new Date(n.getFullYear(),n.getMonth()+1,1),pa=new Date(n.getFullYear(),n.getMonth()-1,1);
 var r=await Promise.all([api.monthDays(ymd(pa),ymd(b)),api.friendships()]),rows=r[0],fr=r[1],by={},prev={};Object.keys(fr.avatars||{}).forEach(function(k){learn(k,fr.avatars[k])});
 function add(id,name){if(!by[id])by[id]={id:id,name:name,days:0,sets:0}}
@@ -317,6 +340,9 @@ me:function(){return sb.from('profiles').select('*').eq('id',uid).single().then(
 setAvatar:async function(blob){var old=must(await sb.from('profiles').select('avatar_path').eq('id',uid).single()).avatar_path,path=uid+'/'+Date.now().toString(36)+Math.random().toString(36).slice(2,10)+'.jpg';
 var up=await sb.storage.from('avatars').upload(path,blob,{contentType:'image/jpeg'});if(up.error)throw up.error;must(await sb.from('profiles').update({avatar_path:path}).eq('id',uid));if(old)sb.storage.from('avatars').remove([old]);return pub(path)},
 setName:function(n){return sb.from('profiles').update({display_name:n}).eq('id',uid).then(must)},
+setRankPrefs:function(o){return sb.from('profiles').update(o).eq('id',uid).then(must)},
+saveBests:function(rows){return sb.from('lift_bests').upsert(rows.map(function(x){return{user_id:uid,exercise:x.exercise,e1rm:x.e1rm,weight:x.weight,reps:x.reps,achieved_at:x.at,updated_at:new Date().toISOString()}})).then(must)},
+nationalRank:function(ex){return sb.rpc('national_rank',{ex:ex,lim:50}).then(must)},
 friendships:async function(){var rows=must(await sb.from('friendships').select('requester,addressee,status,created_at')),ids=rows.map(function(r){return r.requester===uid?r.addressee:r.requester}),names={},avatars={};
 if(ids.length)must(await sb.from('profiles').select('id,display_name,avatar_path').in('id',ids)).forEach(function(p){names[p.id]=p.display_name;avatars[p.id]=pub(p.avatar_path)});return{rows:rows,names:names,avatars:avatars}},
 findByCode:function(c){return sb.rpc('find_by_code',{code:c}).then(function(r){return must(r)[0]||null})},
@@ -363,13 +389,13 @@ function syncDays(since){if(!user||!api.saveDays)return Promise.resolve();var r=
 document.addEventListener('wk:done',function(){if(!user)return;var t0=new Date();t0.setDate(t0.getDate()-7);t0.setHours(0,0,0,0);syncDays(t0.getTime()).then(buddyCheck)});
 // 自己ベストのお知らせ: 同じ日・同じ種目でまた更新したら書き換える
 var ACH='pump-ach-v1';
-document.addEventListener('wk:record',function(e){var d=e.detail||{};if(!user)return;liveBeat();var t0=new Date();t0.setHours(0,0,0,0);syncDays(t0.getTime());
+document.addEventListener('wk:record',function(e){var d=e.detail||{};if(!user)return;if(RANK_EX.indexOf(d.name)>=0)setTimeout(syncBests,0);liveBeat();var t0=new Date();t0.setHours(0,0,0,0);syncDays(t0.getTime());
 if(!d.pr||!api.achieve)return;var map={},key=ymd(Date.now())+'|'+d.name;try{map=JSON.parse(localStorage.getItem(ACH)||'{}')}catch(_){}
 api.achieve(d.name,d.value,map[key]).then(function(id){if(!id)return;Object.keys(map).forEach(function(k){if(k.slice(0,10)<ymd(Date.now()-7*864e5))delete map[k]});map[key]=id;try{localStorage.setItem(ACH,JSON.stringify(map))}catch(_){}}).catch(function(){})});
 
 // ---- ログインしたあと: プッシュ通知の登録と、ログイン前に開いた招待リンク ----
 var pushToken=null,INV='pump-invite';
-function afterLogin(){var N=window.WK_NATIVE,n=new Date();liveBeat(true);loadGrant();loadBadges();syncDays(new Date(n.getFullYear(),n.getMonth()-1,1).getTime());
+function afterLogin(){var N=window.WK_NATIVE,n=new Date();liveBeat(true);loadGrant();loadBadges();syncBests();syncDays(new Date(n.getFullYear(),n.getMonth()-1,1).getTime());
 if(N&&N.pushRegister&&api.saveToken)N.pushRegister(function(t,pf){pushToken=t;api.saveToken(t,pf).catch(function(){})});
 var c=null;try{c=localStorage.getItem(INV);localStorage.removeItem(INV)}catch(e){}if(!c&&N&&N.takeInvite)c=N.takeInvite();if(c)invite(c)}
 
