@@ -250,6 +250,7 @@ header{padding:14px 72px 12px 18px;background:#000;border-bottom:1px solid var(-
 #card h1{font-size:20px;margin:0 0 4px}
 #card>p{margin:0 0 16px;color:var(--sub);font-size:14px}
 #card label{display:block;font-size:13px;color:var(--sub);margin-bottom:12px}
+#card label.tgl{display:flex;align-items:center;gap:10px;color:var(--ink);font-size:14px;margin:4px 0 12px}#card label.tgl[hidden]{display:none}#card label.tgl input{width:22px;height:22px;margin:0;flex:none;accent-color:var(--acc)}#card label.tgl small{display:block;color:var(--sub);font-size:12px}
 #card input,#card select{display:block;width:100%;margin-top:4px;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:10px;padding:12px;font:inherit;font-size:16px}
 #card label[hidden]{display:none}
 #go{width:100%;border:0;background:var(--acc);color:var(--accink);border-radius:12px;padding:13px;font-weight:700;margin-top:6px}
@@ -453,6 +454,7 @@ img.av{object-fit:cover;background:#222}
 <label>身長（cm）<input id="ih" type="number" inputmode="decimal" placeholder="170"></label>
 <label>体重（kg）<input id="iw" type="number" inputmode="decimal" placeholder="65"></label>
 <div id="bi" class="fn"></div>
+<label class="tgl" id="musRow" hidden><input id="musOn" type="checkbox"><span>トレーニング画面に、聴いている曲を表示する<small>Apple Music の曲のジャケ写と曲名</small></span></label>
 <div id="err"></div><button id="go">はじめる</button><button id="fx" hidden>閉じる</button><button id="clear" hidden>全削除</button></div></div>
 
 <div id="sv"><div id="sc"><img id="shi" alt="シェア用画像"><video id="shv" playsinline controls loop hidden></video><div id="shm"></div><div id="thm" class="thm"></div><div class="shh">長押しで写真に保存できるよ</div><div class="sr"><button id="shig">📷 ストーリー</button><button id="shx">𝕏 に投稿</button></div><div class="sr sr2"><button id="shsv">保存</button><button id="shot">その他で共有</button></div><button id="shc">閉じる</button></div></div>
@@ -467,7 +469,7 @@ img.av{object-fit:cover;background:#222}
 <button data-go="friends"><i>👥</i>友達・フィード<span id="fb" class="badge" hidden></span></button>
 <button data-go="account"><i>👤</i>アカウント</button>
 <button data-go="pro"><i>⭐</i>PUMP Pro<span id="prb" class="badge" hidden>ON</span></button>
-<button data-go="settings"><i>⚙️</i>設定（身長・体重）</button>
+<button data-go="settings"><i>⚙️</i>設定（身長・体重・曲の表示）</button>
 <button data-go="backup"><i>💾</i>バックアップ・復元</button>
 <button data-go="help"><i>❓</i>使い方</button>
 </nav></div>
@@ -1245,7 +1247,7 @@ $('shsv').addEventListener('click',function(){shMsg('');saveBlob(shBlob,shExt)})
 // ---- いま聴いている曲（トレーニング画面の上） ----
 // Apple Music で流している曲のジャケ写・曲名・アーティストを出す（アプリ版だけ）。
 // Spotify などほかのアプリの曲は iPhone が教えてくれないので出さない
-(function(){var box=$('mus'),art=$('musa'),tx=$('must'),on=false,st=null,off=false,asked=false,have='';
+(function(){var box=$('mus'),art=$('musa'),tx=$('must'),on=false,st=null,off=get('pump-mus-off','0')==='1',asked=false,have='';
  function demo(){return !!window.WK_DEMO_API&&!(window.WK_NATIVE&&WK_NATIVE.musicState)}
  function visible(){return !document.hidden&&!$('pv').classList.contains('on')&&!$('st').classList.contains('on')&&!$('ov').classList.contains('on')&&!$('sv').classList.contains('on')}
  function demoArt(){var c=document.createElement('canvas');c.width=c.height=120;var g=c.getContext('2d'),gr=g.createLinearGradient(0,0,120,120);gr.addColorStop(0,'#ff5a1f');gr.addColorStop(1,'#3b0a00');g.fillStyle=gr;g.fillRect(0,0,120,120);g.fillStyle='rgba(255,255,255,.9)';g.font="italic 800 30px 'Barlow Condensed',sans-serif";g.fillText('PUMP',18,70);return c.toDataURL()}
@@ -1259,7 +1261,8 @@ $('shsv').addEventListener('click',function(){shMsg('');saveBlob(shBlob,shExt)})
    var known=r.title||(r.playing&&r.auth==='ask');if(!known)return show(false);
    if(r.title&&r.id!==have){have=r.id;r.art=r.art?'data:image/jpeg;base64,'+r.art:''}
    st=r;render();show(true)})}
- box.addEventListener('click',function(e){if(e.target.closest('#musx')){off=true;show(false);return}if(st&&!st.title&&st.auth==='ask'&&!asked){asked=true;poll(true)}});
+ $('musOn').addEventListener('change',function(){off=!this.checked;put('pump-mus-off',off?'1':'0');if(off)show(false);else poll(false)});
+ box.addEventListener('click',function(e){if(e.target.closest('#musx')){off=true;put('pump-mus-off','1');show(false);svToast('曲の表示を消したよ。メニュー →「設定」でまた出せる');return}if(st&&!st.title&&st.auth==='ask'&&!asked){asked=true;poll(true)}});
  setInterval(function(){poll(false)},3000);document.addEventListener('visibilitychange',function(){poll(false)});setTimeout(function(){poll(false)},800)})();
 
 // ---- 写真 ----
@@ -1274,7 +1277,7 @@ var ih=$('ih'),iw=$('iw'),ferr=$('err');
 function showForm(){ih.value=profile?profile.h:'';iw.value=profile?profile.w:'';ferr.textContent='';
 $('ct').textContent=profile?'設定':'はじめに教えてね';$('cp').textContent=profile?'身長・体重は日によって変わるから、いつでも更新してね。変えるたびに記録が残って、統計で推移が見られるよ。':'自重種目の計算に体重を使うよ。あとから右上のメニュー →「設定」で変えられる。';
 var lb=body[body.length-2];$('bi').textContent=profile&&lb?'前回の記録: '+md(lb.t)+' 身長'+lb.h+'cm / 体重'+lb.w+'kg':'';
-$('go').textContent=profile?'保存':'はじめる';$('fx').hidden=!profile;$('clear').hidden=!profile;ov.className='on'}
+$('go').textContent=profile?'保存':'はじめる';$('fx').hidden=!profile;$('musRow').hidden=!profile;$('musOn').checked=get('pump-mus-off','0')!=='1';$('clear').hidden=!profile;ov.className='on'}
 function submitForm(){var h=parseFloat(ih.value),w=parseFloat(iw.value);if(!(h>=100&&h<=250)){ferr.textContent='身長は100〜250cmで入れてね。';return}if(!(w>=25&&w<=300)){ferr.textContent='体重は25〜300kgで入れてね。';return}
 var first=!profile,prevW=profile?profile.w:null,changed=first||profile.h!==h||profile.w!==w;profile={h:h,w:w};save();if(changed)logBody(h,w);profUI();qkUI();ov.className='';
 if(first)add('登録したよ。身長'+h+'cm・体重'+w+'kg。\nSTARTを押したら、種目と重さ・回数を送ってね。\n例: ベンチ 100 2 / ダンベルプレス 40 8回\nダンベルは片手の重さ。ディップスは体重＋追加分で、例: ディップス +10 8回','bot');
