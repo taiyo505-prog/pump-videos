@@ -146,6 +146,10 @@ header{padding:14px 72px 12px 18px;background:#000;border-bottom:1px solid var(-
 #pk .kt button{flex:none;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:999px;padding:4px 12px;font-size:13px}
 #pk .kt button.on{background:var(--acc);border-color:var(--acc);color:var(--accink);font-weight:700}
 #pk .kl{display:flex;flex-wrap:wrap;gap:6px}
+#pk.big{max-height:62vh}#pk .kq{width:100%;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:10px;padding:9px 12px;font:inherit;font-size:15px;margin-bottom:8px}
+#pk .kc{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}#pk .kc button{border:1px solid var(--line);background:var(--bot);color:var(--ink);border-radius:12px;padding:4px 4px 8px;font-size:12px;font-weight:700;line-height:1.3;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0}#pk .kc button span{width:100%;aspect-ratio:1;display:block}#pk .kc button svg,#pk .kfs svg{width:100%;height:100%;display:block}#pk .kc b{display:block;word-break:break-all;font-family:inherit;font-style:normal;font-size:12px;letter-spacing:0}#pk .kc i{font-style:normal;font-weight:400;font-size:10px;color:var(--sub)}
+#pk .kfs{width:64px;height:64px;flex:none;background:var(--bot);border-radius:10px}#pk .kwh{display:flex;gap:10px;align-items:center;margin-bottom:8px}
+#hlp{flex:none;width:40px;height:40px;border-radius:50%;border:1px solid var(--acc);background:none;color:var(--acc);font-size:19px;font-weight:800;align-self:center}
 #pk .kl button{border:1px solid var(--line);background:var(--bot);color:var(--ink);border-radius:999px;padding:7px 12px;font-size:13px}
 #pk .kn{font-size:12px;color:var(--sub);margin:8px 0 2px}
 #pk:not([hidden])~#bar{border-top:0}
@@ -431,7 +435,7 @@ img.av{object-fit:cover;background:#222}
 <div id="tm" hidden><span id="tw" role="button" aria-label="タップで時間を大きく・小さく"><span id="tt"></span><small id="tl"></small></span><button id="tb" type="button" aria-label="休憩時間（タップで変更）"></button><button id="br" type="button">セット終わり</button><div id="brs" hidden></div><button id="tms" type="button">小さくする</button></div>
 <div id="qk" hidden></div>
 <div id="pk" hidden></div>
-<div id="bar"><input id="in" placeholder="例: ダンベルプレス 40 8回" autocomplete="off" enterkeyhint="send"><button id="send">記録</button></div>
+<div id="bar"><button id="hlp" type="button" aria-label="種目をイラストで探す">？</button><input id="in" placeholder="例: ダンベルプレス 40 8回" autocomplete="off" enterkeyhint="send"><button id="send">記録</button></div>
 </div>
 
 <input id="cam" type="file" accept="image/*" capture="environment" hidden>
@@ -469,6 +473,7 @@ img.av{object-fit:cover;background:#222}
 <script src="config.js"></script>
 <script src="vendor/supabase.js"></script>
 <script src="exercises.js"></script>
+<script src="figs.js"></script>
 <script>
 (function(){
 'use strict';
@@ -615,7 +620,7 @@ log.addEventListener('click',function(e){var b=e.target.closest&&e.target.closes
 
 // ---- ボタンだけで記録（種目 → 重さ → 回数） ----
 var pk=$('pk'),pkS={};
-function pkClose(){pk.hidden=true;pk.innerHTML='';pkS={}}
+function pkClose(){pk.hidden=true;pk.innerHTML='';pk.classList.remove('big');pkS={}}
 function lastOf(name){for(var i=data.length-1;i>=0;i--)if(data[i].name===name)return data[i];return null}
 function fmtW(w){return String(r1(w))}
 function pkHead(t,back){return "<div class='kh'><span>"+t+"</span><span class='ksp'></span>"+(back?"<button data-pb='"+back+"'>← 戻る</button>":'')+"<button data-pc='1'>✕</button></div>"}
@@ -624,25 +629,35 @@ function wOpts(name){var k=kind(name),l=lastOf(name),st=k==='db'?[-4,-2,-1,0,1,2
 if(k==='bw'){var a=l?(l.added||0):0;[0,2.5,5,7.5,10,15,20,25].forEach(function(x){o.push({v:x,t:x?'+'+x:'自重',on:x===a})});return o}
 if(!l){(k==='db'?[4,6,8,10,12,14,16,18,20,22,24,26]:[20,30,40,50,60,70,80,90,100,110,120,140]).forEach(function(x){o.push({v:x,t:fmtW(x)})});return o}
 st.forEach(function(d){var v=r1(l.w+d);if(v>0)o.push({v:v,t:fmtW(v),on:d===0})});return o}
-function pkWeight(name){var k=kind(name),l=lastOf(name);pkS={name:name};
-var h=pkHead('<b>'+esc(name)+'</b>　'+(k==='bw'?'追加の重さは？':k==='db'?'重さは？（片手）':'重さは？')+(l?"<span style='color:var(--sub)'>（前回 "+(k==='bw'?(l.added?'+'+l.added:'自重'):fmtW(l.w)+'kg')+'×'+l.reps+'）</span>':''),null)+"<div class='kg2'>";
+function pkWeight(name){var k=kind(name),l=lastOf(name);pkS={name:name,g:pkS.g};
+var h=pkHead('<b>'+esc(name)+'</b>','l')+"<div class='kwh'><span class='kfs' data-fig='"+esc(name)+"' data-part='"+esc(pkPart(name))+"'></span><span>"+(k==='bw'?'追加の重さは？':k==='db'?'重さは？（片手）':'重さは？')+(l?"<br><span style='color:var(--sub);font-size:13px'>前回 "+(k==='bw'?(l.added?'+'+l.added:'自重'):fmtW(l.w)+'kg')+'×'+l.reps+'</span>':'')+"</span></div><div class='kg2'>";
 wOpts(name).forEach(function(o){h+="<button data-pw='"+o.v+"' class='"+(o.on?'on':'')+"'>"+o.t+'</button>'});
-h+="<button class='kw' data-pt='1'>✏️ 文字で入力</button></div>";pk.innerHTML=h;pk.hidden=false;log.scrollTop=log.scrollHeight}
+h+="<button class='kw' data-pt='1'>✏️ 文字で入力</button></div>";pk.innerHTML=h;pk.hidden=false;pk.classList.remove('big');pk.scrollTop=0;pkFigs();log.scrollTop=log.scrollHeight}
 var BAR_EX={'ベンチプレス':1,'インクラインベンチプレス':1,'デクラインベンチプレス':1,'ナローベンチプレス':1,'スクワット':1,'フロントスクワット':1,'デッドリフト':1,'ルーマニアンデッドリフト':1,'スモウデッドリフト':1,'ベントオーバーロー':1,'オーバーヘッドプレス':1,'ミリタリープレス':1,'ヒップスラスト':1};
 function plates(name,w){if(!(BAR_EX[name]||(/バーベル/.test(name)&&!/スミス/.test(name)))||w<20)return'';var r=(w-20)/2,o=[];if(r<=0)return'バーだけ（20kg）';[25,20,15,10,5,2.5,1.25].forEach(function(p){while(r>=p-1e-9){o.push(p);r-=p}});return r>1e-6?'':'片側 '+o.join(' + ')+'（バー20kg）'}
 function pkReps(w){var name=pkS.name,k=kind(name),l=lastOf(name);pkS.w=w;var pl=k==='bw'?'':plates(name,w);
 var h=pkHead('<b>'+esc(name)+'</b> '+(k==='bw'?(w?'+'+fmtW(w)+'kg':'自重'):fmtW(w)+'kg'+(k==='db'?'（片手）':''))+'　回数は？'+(pl?"<br><span style='color:var(--sub);font-size:12px'>🏋 "+pl+'</span>':''),'w')+"<div class='kg2'>";
 [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,20].forEach(function(r){h+="<button data-pr='"+r+"' class='"+(l&&l.reps===r?'on':'')+"'>"+r+'</button>'});
 pk.innerHTML=h+'</div>'}
+function pkPart(n){var x=EX.filter(function(e){return e[0]===n})[0];return x?x[1]:(groupOf(n)||'')}
+function pkCards(list){return "<div class='kc'>"+list.map(function(n){var pt=pkPart(n);return "<button data-pe='"+esc(n)+"'><span class='kf' data-fig='"+esc(n)+"' data-part='"+esc(pt)+"'></span><b>"+esc(n)+'</b>'+(pt?'<i>'+esc(pt)+'</i>':'')+'</button>'}).join('')+'</div>'}
+function pkFigs(){if(!window.PUMP_FIGS)return;[].forEach.call(pk.querySelectorAll('[data-fig]'),function(el){PUMP_FIGS.animate(el,el.getAttribute('data-fig'),el.getAttribute('data-part'))})}
+// 種目を選ぶ（イラストつき）。上の検索で名前・別名から探せる
 function pkList(g){var rec=[],seen={};for(var i=data.length-1;i>=0&&rec.length<12;i--){var n=data[i].name;if(!seen[n]){seen[n]=1;rec.push(n)}}
-g=g||(rec.length?'最近':GROUPS[0]);var tabs=(rec.length?['最近']:[]).concat(GROUPS,['全身','他']),h=pkHead('<b>種目を選ぶ</b>',null)+"<div class='kt'>";
-tabs.forEach(function(t){h+="<button data-pg='"+t+"' class='"+(t===g?'on':'')+"'>"+t+'</button>'});h+="</div><div class='kl'>";
+g=g||(rec.length?'最近':GROUPS[0]);pkS={g:g};var tabs=(rec.length?['最近']:[]).concat(GROUPS,['全身','他']),h=pkHead('<b>種目を選ぶ</b>',null)+"<input class='kq' id='pkq' type='search' placeholder='🔍 名前で探す（例: ベンチ、カール）' autocomplete='off'><div class='kt'>";
+tabs.forEach(function(t){h+="<button data-pg='"+t+"' class='"+(t===g?'on':'')+"'>"+t+'</button>'});h+="</div><div id='pkl'>";
 var list=g==='最近'?rec:EX.filter(function(x){return x[1]===g}).map(function(x){return x[0]});
-list.forEach(function(n){h+="<button data-pe='"+esc(n)+"'>"+esc(n)+'</button>'});
-pk.innerHTML=h+"</div><div class='kn'>見つからないときは文字で打ってね（ジム独自のマシンは「種目追加 名前 部位」で登録できる）</div>";pk.hidden=false}
+pk.innerHTML=h+pkCards(list)+"</div><div class='kn'>イラストをタップすると、重さ→回数を選んで記録できるよ。見つからないときは文字で打ってね（ジム独自のマシンは「種目追加 名前 部位」で登録できる）</div>";pk.hidden=false;pk.classList.add('big');pk.scrollTop=0;pkFigs()}
+function pkSearch(q){var l=$('pkl');if(!l)return;q=norm(q||'').toLowerCase().replace(/\s+/g,'');
+ if(!q){pkList(pkS.g);return}
+ var hit=EX.filter(function(x){return (x[0]+','+x[2]).toLowerCase().replace(/\s+/g,'').indexOf(q)>=0}).map(function(x){return x[0]}).slice(0,30);
+ [].forEach.call(pk.querySelectorAll('.kt button'),function(b){b.className=''});
+ l.innerHTML=hit.length?pkCards(hit):"<p class='kn'>見つからなかった。ちがう言い方で探してみてね。</p>";pkFigs()}
 function pkRecord(reps){var name=pkS.name,k=kind(name),w=pkS.w,t=k==='bw'?name+(w?' +'+fmtW(w):'')+' '+reps+'回':name+' '+fmtW(w)+' '+reps+'回';pkClose();primeAudio();add(t,'me');handle(t)}
+pk.addEventListener('input',function(e){if(e.target.id==='pkq')pkSearch(e.target.value)});
+$('hlp').addEventListener('click',function(){emit('wk:tick');if(!pk.hidden&&pk.classList.contains('big')){pkClose();return}pkList()});
 pk.addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;emit('wk:tick');var a=function(n){return b.getAttribute(n)};
-if(a('data-pc'))pkClose();else if(a('data-pb'))pkWeight(pkS.name);else if(a('data-pg'))pkList(a('data-pg'));else if(a('data-pe'))pkWeight(a('data-pe'));
+if(a('data-pc'))pkClose();else if(a('data-pb'))a('data-pb')==='l'?pkList(pkS.g):pkWeight(pkS.name);else if(a('data-pg'))pkList(a('data-pg'));else if(a('data-pe'))pkWeight(a('data-pe'));
 else if(a('data-pw')!==null)pkReps(parseFloat(a('data-pw')));else if(a('data-pr'))pkRecord(parseInt(a('data-pr'),10));
 else if(a('data-pt')){var n=pkS.name;pkClose();inp.value=n+' ';inp.focus()}});
 
