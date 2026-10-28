@@ -764,15 +764,15 @@ if(k==='narrow')h+='\nベンチに換算すると: <b>約'+Math.round(bench)+'kg
 if(isPR)h+='\n<span class="pr">🏆 この種目の自己ベスト更新！</span>\n<button class="hb2 prb" data-prc=\''+esc(JSON.stringify({n:p.name,t:(p.bw?(p.added?'+'+r1(p.added)+'kg':'自重'):r1(p.w)+'kg')+' × '+p.reps,e:r1(e1),d:k==='db'?1:0,at:Date.now()}))+'\'>🏆 NEW PR の画像を作る</button>';
 else if(!prev)h+='\nこの種目の初記録。';
 if(p.reps>12)h+='\n※回数が多いほど推定の誤差は大きくなるよ。';
-// セットごとに「セット終わり」か記録のどちらか1回でいい:
-// 先に「セット終わり」を押していたら、ラップも休憩もそのまま（休憩はセット終わりの時間から数え続ける）
-// 押していなければ、記録した時にラップを取って休憩を始める
+// ラップは「セット終わり」を押したときだけ進める（記録しただけでは進めない）
+// 先に「セット終わり」を押していたら、休憩はそのまま（セット終わりの時間から数え続ける）
+// 押していなければ、記録した時に休憩を始める
 var marked=setDone;setDone=false;
 h+=cmp(p,e1,ns);// 種目ごとの設定がなければ、時間の段に出ている休憩時間（最初は90秒）で始める
 var own=restBy[p.name],rs=own!==undefined?own:(restBy[REST_DEF]>=0?restBy[REST_DEF]:90);
 h+=rs>0?'\n⏲ 休憩 '+fmtRest(rs)+(marked?'（セット終わりから計測）':' スタート')+(own===undefined?'（この種目の休憩は？）':'')+'\n'+restRow(p.name):rs===0?'':'\n⏲ この種目の休憩は？\n'+restRow(p.name);
 add('','bot',h);updateBest();qkUI();
-if(marked){rBtn=false;if(rId&&rs>0){rEnd=rT0+rs*1000;rTick()}}else{sLap();restStop();if(rs>0)restStart(rs)}if(isPR)confetti();emit('wk:record',{pr:isPR,name:p.name,value:(p.bw?(p.added?'+'+r1(p.added)+'kg':'自重'):r1(p.w)+'kg')+' × '+p.reps})}
+if(marked){rBtn=false;if(rId&&rs>0){rEnd=rT0+rs*1000;rTick()}}else{restStop();if(rs>0)restStart(rs)}if(isPR)confetti();emit('wk:record',{pr:isPR,name:p.name,value:(p.bw?(p.added?'+'+r1(p.added)+'kg':'自重'):r1(p.w)+'kg')+' × '+p.reps})}
 function send(){var v=inp.value.trim();if(!v)return;primeAudio();add(v,'me');inp.value='';handle(v)}
 $('send').addEventListener('click',send);
 inp.addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.isComposing)send()});
@@ -1161,7 +1161,7 @@ function helpHtml(inChat){var h="<div class='hp'>"+(inChat?'<b>使い方</b>\n':
 '<p>↩️ <b>取り消し</b>: <code>取り消し</code>　✅ <b>終了</b>: <code>終わり</code></p>'+
 '<p>📋 <b>コーチ</b>: <code>おすすめ</code>（次の種目と重さ）<code>分析</code>（週間レポート）<code>自己ベスト</code></p>'+
 '<p>⚖️ <b>体重・身長</b>: <code>体重 64.5</code> <code>身長 172</code>（メニューの設定からも変えられる）</p>'+
-'<p>⏲ <b>休憩タイマー</b>: 種目ごとに覚えるよ。記録したあとのボタンで選ぶか、<code>休憩 2分</code> <code>休憩 90</code> <code>休憩なし</code>（直前の種目に設定）。タイマーはタップで止まる。<br>息が上がって打てないときは、セットが終わったらすぐ <b>セット終わり</b> ボタン。休憩が始まってラップも記録される。記録はあとで打っても休憩もラップもやり直しにならないよ。すぐ記録できるときは、記録するだけで休憩とラップが始まるから、ボタンはいらないよ。<b>⏲ 2分 ▾</b> のボタンで休憩の時間を変えたり止めたりできる。「なし」にすると休憩タイマーは消えて、ラップだけになる（<b>＋休憩</b> を押すとまた選べる）。時間の横の <b>ラップ</b> はセット終わり（か記録）で0秒から数え直すよ。</p>'+
+'<p>⏲ <b>休憩タイマー</b>: 種目ごとに覚えるよ。記録したあとのボタンで選ぶか、<code>休憩 2分</code> <code>休憩 90</code> <code>休憩なし</code>（直前の種目に設定）。タイマーはタップで止まる。<br>息が上がって打てないときは、セットが終わったらすぐ <b>セット終わり</b> ボタン。休憩が始まってラップも記録される。記録はあとで打っても休憩もラップもやり直しにならないよ。押し忘れても、記録すると休憩は始まるよ（ラップは「セット終わり」を押したときだけ進む）。<b>⏲ 2分 ▾</b> のボタンで休憩の時間を変えたり止めたりできる。「なし」にすると休憩タイマーは消えて、ラップだけになる（<b>＋休憩</b> を押すとまた選べる）。時間の横の <b>ラップ</b> はセット終わり（か記録）で0秒から数え直すよ。</p>'+
 '<p>☰ 右上のメニューから、履歴・統計・友達・設定・バックアップに行けるよ。</p></div>';return h}
 
 // ---- シェア画像 ----
