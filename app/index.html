@@ -497,7 +497,7 @@ function cSave(){put(K.chats,chats)}
 function logBody(h,w,bf){var t=Date.now(),last=body[body.length-1],o={t:t,h:h,w:w};if(bf>0)o.bf=bf;else if(last&&dkey(last.t)===dkey(t)&&last.bf)o.bf=last.bf;if(last&&dkey(last.t)===dkey(t))body[body.length-1]=o;else body.push(o);put(K.body,body)}
 
 // ---- 小物 ----
-var log=$('log'),inp=$('in'),profEl=$('prof'),ov=$('ov'),tmEl=$('tm'),ttEl=$('tt'),stOn=!ses,lastCid=null,shPh=null,camFor=null,shBlob=null,shText='',armed=false;
+var log=$('log'),inp=$('in'),profEl=$('prof'),ov=$('ov'),tmEl=$('tm'),ttEl=$('tt'),stOn=!ses,lastCid=null,shPh=null,camFor=null,shBlob=null,shText='',armed=false,shCv=null,shStory=null;
 var D=864e5;
 function emit(n,d){try{document.dispatchEvent(new CustomEvent(n,{detail:d||{}}))}catch(e){}}
 function norm(s){return s.replace(/[０-９．]/g,function(c){return c==='．'?'.':String.fromCharCode(c.charCodeAt(0)-0xFEE0)})}
@@ -1197,21 +1197,28 @@ var s=L.s,y=TOP+Math.round(36*s);
 L.rows.forEach(function(r){g.fillStyle='#fff';g.font='700 '+Math.round(42*s)+'px '+F;g.fillText(r.n,70,y);g.fillStyle=O;g.font='600 '+Math.round(32*s)+'px '+F;r.l.forEach(function(t,i){g.fillText(t,70,y+Math.round(46*s)+i*Math.round(44*s))});y+=Math.round(50*s)+r.l.length*Math.round(44*s)+Math.round(14*s)});
 g.fillStyle=O;g.font='italic 700 44px '+F;g.textAlign='right';g.fillText('PUMP',1010,H-35);g.textAlign='left';
 shText=title+'（'+titleJa(es)+'）｜'+order.length+'種目・'+es.length+'セット'+(du?'・'+hms(du):'')+' #筋トレ #筋トレ記録 #PUMPアプリ';
-shBlob=null;cv.toBlob(function(bl){shBlob=bl});
+shCv=cv;shStory=null;shBlob=null;cv.toBlob(function(bl){shBlob=bl});
 $('shi').src=cv.toDataURL('image/png');$('shm').textContent='';themeUI();$('sv').className='on'}
 $('shc').addEventListener('click',function(){$('sv').className='';var v=$('shv');if(!v.hidden)v.pause()});
 // フィードの投稿などの画像を、同じシェア画面で出す（保存・インスタ・X）
 var shExt='png';
-function showImage(cv,text){shBlob=null;shExt='png';cv.toBlob(function(bl){shBlob=bl});shText=text;var v=$('shv');v.pause();v.hidden=true;$('shi').hidden=false;$('shi').src=cv.toDataURL('image/png');$('shm').textContent='';$('thm').innerHTML='';$('sv').className='on'}
+function showImage(cv,text,story){shCv=cv;shStory=story||null;shBlob=null;shExt='png';cv.toBlob(function(bl){shBlob=bl});shText=text;var v=$('shv');v.pause();v.hidden=true;$('shi').hidden=false;$('shi').src=cv.toDataURL('image/png');$('shm').textContent='';$('thm').innerHTML='';$('sv').className='on'}
 // 動画（月間ハイライト）を共有画面に出す
-function showVideo(blob,ext,text){shBlob=blob;shExt=ext;shText=text;var v=$('shv');$('shi').hidden=true;v.hidden=false;v.src=URL.createObjectURL(blob);v.play().catch(function(){});$('shm').textContent='';$('thm').innerHTML='';$('sv').className='on'}
-function shareFile(){if(shBlob&&window.WK_NATIVE&&WK_NATIVE.shareFile){WK_NATIVE.shareFile(shBlob,'pump-'+Date.now()+'.'+shExt,shText).then(function(ok){if(!ok)$('shm').textContent='共有できなかった。もう一度試してね。'});return true}
-if(!shBlob||!navigator.canShare)return false;var f=new File([shBlob],'workout.'+shExt,{type:shBlob.type||'image/png'});if(!navigator.canShare({files:[f]}))return false;navigator.share({files:[f],text:shText}).catch(function(){});return true}
+function showVideo(blob,ext,text){shCv=null;shStory=null;shBlob=blob;shExt=ext;shText=text;var v=$('shv');$('shi').hidden=true;v.hidden=false;v.src=URL.createObjectURL(blob);v.play().catch(function(){});$('shm').textContent='';$('thm').innerHTML='';$('sv').className='on'}
+function shareFile(bl){bl=bl||shBlob;if(bl&&window.WK_NATIVE&&WK_NATIVE.shareFile){WK_NATIVE.shareFile(bl,'pump-'+Date.now()+'.'+shExt,shText).then(function(ok){if(!ok)$('shm').textContent='共有できなかった。もう一度試してね。'});return true}
+if(!bl||!navigator.canShare)return false;var f=new File([bl],'workout.'+shExt,{type:bl.type||'image/png'});if(!navigator.canShare({files:[f]}))return false;navigator.share({files:[f],text:shText}).catch(function(){});return true}
 function shMsg(t){$('shm').textContent=t}
 function shOther(){if(!shareFile())shMsg(shExt==='png'?'画像を長押しして保存してから、アプリで選んでね。':'この端末では共有できなかった。アプリ版なら保存・共有できるよ。')}
 // インスタ: アプリ版はストーリーの作成画面に直接。ブラウザは共有メニュー（Instagram →「ストーリーズ」）
-$('shig').addEventListener('click',function(){var N=window.WK_NATIVE;if(N&&N.igStory&&shBlob){N.igStory(shBlob).then(function(ok){if(!ok)shOther()});return}
- if(!shareFile())shMsg('画像を長押しして保存→インスタのストーリーで選んでね。');else shMsg('出てきたメニューで Instagram →「ストーリーズ」をえらんでね。')});
+// ストーリー用: 画面いっぱいの 9:16（1080×1920）にする。作り直せる画像は作り直し、ほかは後ろをぼかして広げる
+function storyCanvas(){if(!shCv)return null;var c=shStory?shStory():shCv;if(!c)return null;if(Math.abs(c.width/c.height-9/16)<0.02)return c;
+ var W=1080,H=1920,o=document.createElement('canvas');o.width=W;o.height=H;var g=o.getContext('2d'),k=Math.max(W/c.width,H/c.height);g.fillStyle='#000';g.fillRect(0,0,W,H);
+ try{g.filter='blur(40px) brightness(.55)'}catch(e){}g.drawImage(c,(W-c.width*k)/2,(H-c.height*k)/2,c.width*k,c.height*k);g.filter='none';
+ var f=Math.min(W/c.width,H/c.height);g.drawImage(c,(W-c.width*f)/2,(H-c.height*f)/2,c.width*f,c.height*f);return o}
+function storyBlob(cb){if(shExt!=='png')return cb(shBlob);var c=storyCanvas();if(!c||c===shCv)return cb(shBlob);c.toBlob(function(b){cb(b||shBlob)},'image/png')}
+$('shig').addEventListener('click',function(){var N=window.WK_NATIVE;
+ storyBlob(function(sb){if(N&&N.igStory&&sb){N.igStory(sb).then(function(ok){if(!ok&&!shareFile(sb))shOther()});return}
+  if(!shareFile(sb))shMsg('画像を長押しして保存→インスタのストーリーで選んでね。');else shMsg('出てきたメニューで Instagram →「ストーリーズ」をえらんでね。')})});
 // X: X は他のアプリから画像を直接わたせないので、画像をコピーしてから投稿画面を開く（投稿画面で長押し→ペースト）
 $('shx').addEventListener('click',function(){var N=window.WK_NATIVE;if(shExt!=='png'){shOther();return}
  if(N&&N.xPost){N.xPost(shBlob,shText).then(function(r){if(!r){shOther();return}shMsg('画像はコピー済み。投稿画面の文字を入れるところを長押し→「ペースト」で画像がつくよ。')});return}
@@ -1298,7 +1305,7 @@ document.addEventListener('click',function(e){var b=e.target.closest('[data-go]'
 document.addEventListener('keydown',function(e){if(e.key==='Escape'&&dr.classList.contains('on'))drawer(false)});
 
 // ---- cloud.js から使う ----
-window.WK={
+window.WK={storyCanvas:function(){return storyCanvas()},
 get data(){return data},get profile(){return profile},get sessions(){return sesAll},get photos(){return photos},
 showImage:showImage,session:function(){return ses?{t0:ses.t0}:null},add:add,esc:esc,md:md,hms:hms,dkey:dkey,vol:vol,kind:kind,byName:byName,setStr:setStr,titleOf:titleOf,titleJa:titleJa,sDur:sDur,
 coach:coach,showPage:showPage,page:page,go:go,

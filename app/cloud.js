@@ -118,24 +118,25 @@ o.innerHTML="<div class='pvt'><div><div class='pdt'>"+dateTag(p.performed_at)+"<
 ex.map(function(x,k){var ti=topIdx(x.sets);return "<div class='pox'><b><small>"+('0'+(k+1)).slice(-2)+'</small>'+esc(x.name)+(x.db?'<i>片手</i>':'')+'</b><span>'+(x.sets||[]).map(function(t,i){return '<em'+(i===ti&&(x.sets||[]).length>1?" class='tp'":'')+'>'+esc(t)+'</em>'}).join('')+'</span></div>'}).join('')+'</div>';return o}
 // 投稿を1枚の画像（幅1080）にする。インスタに載せやすい 4:5 を優先し、メニューが多い日は縦に伸ばす
 var CF="'Barlow Condensed','Hiragino Sans','Noto Sans JP',sans-serif",CJ="'Zen Kaku Gothic New','Hiragino Sans','Noto Sans JP',sans-serif";
-function postImage(p,img){var W=1080,ex=p.exercises||[],O=getComputedStyle(document.documentElement).getPropertyValue('--acc').trim()||'#ff5a1f',mc=document.createElement('canvas').getContext('2d');
+function postImage(p,img,tall){var W=1080,ex=p.exercises||[],O=getComputedStyle(document.documentElement).getPropertyValue('--acc').trim()||'#ff5a1f',mc=document.createElement('canvas').getContext('2d');
 function rowsOf(s){return ex.map(function(x,k){mc.font='700 '+Math.round(38*s)+'px '+CJ;var nm=x.name+(x.db?'（片手）':''),nw=mc.measureText(nm).width+Math.round(58*s);
 mc.font='600 '+Math.round(42*s)+'px '+CF;var room=1000-Math.min(nw,560)-30,lines=[[]],cw=0,gap=Math.round(26*s);
 (x.sets||[]).forEach(function(t,i){var w=mc.measureText(t).width;if(lines[lines.length-1].length&&cw+gap+w>room){lines.push([]);cw=0}lines[lines.length-1].push(i);cw+=(lines[lines.length-1].length>1?gap:0)+w});
 return{k:k,nm:nm,x:x,lines:lines,h:Math.max(1,lines.length)*Math.round(54*s)+Math.round(22*s)}})}
-var H=1350,s=1,R,need;function tot(R,s){return R.reduce(function(a,r){return a+r.h},0)+Math.round(260*s)}
+var H=tall?1920:1350,s=1,R,need;function tot(R,s){return R.reduce(function(a,r){return a+r.h},0)+Math.round(260*s)}
 for(;;){R=rowsOf(s);need=tot(R,s);if(need<=H*.62||s<=.6)break;s-=.05}
 if(need>H*.62)H=Math.min(1920,Math.ceil(need/.62));
 var cv=document.createElement('canvas');cv.width=W;cv.height=H;var g=cv.getContext('2d');g.fillStyle='#000';g.fillRect(0,0,W,H);
 if(img){var iw=img.naturalWidth||img.width,ih=img.naturalHeight||img.height,sc=Math.max(W/iw,H/ih);g.drawImage(img,(W-iw*sc)/2,(H-ih*sc)/2,iw*sc,ih*sc)}
 var gt=g.createLinearGradient(0,0,0,340);gt.addColorStop(0,'rgba(0,0,0,.6)');gt.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=gt;g.fillRect(0,0,W,340);
-var y0=H-need-80,gb=g.createLinearGradient(0,y0,0,H);gb.addColorStop(0,'rgba(0,0,0,0)');gb.addColorStop(.25,'rgba(0,0,0,.6)');gb.addColorStop(1,'rgba(0,0,0,.88)');g.fillStyle=gb;g.fillRect(0,y0,W,H-y0);
-g.shadowColor='rgba(0,0,0,.5)';g.shadowBlur=8;g.textBaseline='alphabetic';
+var TO=tall?130:0,BO=tall?170:0;// ストーリーでは上（名前）と下（返信欄）にかからないよう内側に
+var y0=H-need-80-BO,gb=g.createLinearGradient(0,y0,0,H);gb.addColorStop(0,'rgba(0,0,0,0)');gb.addColorStop(.25,'rgba(0,0,0,.6)');gb.addColorStop(1,'rgba(0,0,0,.88)');g.fillStyle=gb;g.fillRect(0,y0,W,H-y0);
+g.shadowColor='rgba(0,0,0,.5)';g.shadowBlur=8;g.textBaseline='alphabetic';g.save();g.translate(0,TO);
 g.fillStyle='rgba(255,255,255,.8)';g.font='700 30px '+CF;g.fillText(dateTag(p.performed_at),44,74);
 g.fillStyle='#fff';g.font='italic 800 104px '+CF;g.fillText(p.title,40,170,820);g.shadowBlur=0;g.fillStyle=O;g.fillRect(44,188,72,8);
 g.shadowBlur=8;g.fillStyle='rgba(255,255,255,.92)';g.font='700 34px '+CJ;g.fillText(p.title_ja||'',44,240);g.shadowBlur=0;
-g.fillStyle='rgba(0,0,0,.4)';g.beginPath();g.roundRect?g.roundRect(W-212,40,172,62,12):g.rect(W-212,40,172,62);g.fill();g.fillStyle=O;g.font='italic 800 50px '+CF;g.textAlign='center';g.fillText('PUMP',W-126,88);g.textAlign='left';
-var y=H-need+Math.round(20*s),st=(p.duration_ms?[['TIME',dur2(p.duration_ms)]]:[]).concat([['SETS',String(p.sets)],['EXERCISES',String(ex.length)]]),x=74;
+g.fillStyle='rgba(0,0,0,.4)';g.beginPath();g.roundRect?g.roundRect(W-212,40,172,62,12):g.rect(W-212,40,172,62);g.fill();g.fillStyle=O;g.font='italic 800 50px '+CF;g.textAlign='center';g.fillText('PUMP',W-126,88);g.textAlign='left';g.restore();
+var y=H-need-BO+Math.round(20*s),st=(p.duration_ms?[['TIME',dur2(p.duration_ms)]]:[]).concat([['SETS',String(p.sets)],['EXERCISES',String(ex.length)]]),x=74;
 g.fillStyle=O;g.fillRect(44,y-Math.round(4*s),Math.round(9*s),Math.round(150*s));
 st.forEach(function(v){g.shadowBlur=8;g.fillStyle='#fff';g.font='700 '+Math.round(96*s)+'px '+CF;g.fillText(v[1],x,y+Math.round(84*s));var w=g.measureText(v[1]).width;g.shadowBlur=0;g.fillStyle=O;g.font='700 '+Math.round(26*s)+'px '+CF;g.fillText(v[0].split('').join(String.fromCharCode(8202)),x+2,y+Math.round(130*s));x+=Math.max(w,g.measureText(v[0]).width*1.3)+Math.round(60*s)});
 y+=Math.round(190*s);
@@ -146,7 +147,7 @@ return cv}
 function loadImg(u){return new Promise(function(res,rej){var im=new Image();im.crossOrigin='anonymous';im.onload=function(){res(im)};im.onerror=rej;im.src=u})}
 async function savePost(p){try{var im=p.photo?await loadImg(p.photo):null,cv;
 if(p.card&&im){cv=document.createElement('canvas');cv.width=im.naturalWidth;cv.height=im.naturalHeight;cv.getContext('2d').drawImage(im,0,0)}else cv=postImage(p,im);
-W.showImage(cv,(p.title||'')+(p.title_ja?'（'+p.title_ja+'）':'')+'｜'+p.sets+'セット #筋トレ #筋トレ記録 #PUMPアプリ')}catch(e){toast('画像を作れなかった。もう一度ためしてね')}}
+W.showImage(cv,(p.title||'')+(p.title_ja?'（'+p.title_ja+'）':'')+'｜'+p.sets+'セット #筋トレ #筋トレ記録 #PUMPアプリ',p.card&&im?null:function(){return postImage(p,im,1)})}catch(e){toast('画像を作れなかった。もう一度ためしてね')}}
 function postCard(p){var mine=p.user_id===me.id,liked=p.likes.indexOf(me.id)>=0,nl=p.likes.length,nc=p.comments,c=h('div',{class:'day post2'});
 var hd=h('div',{class:'phd'},avatar(p.user_id,p.name)+"<button class='pn' type='button'>"+esc(p.name)+"</button><span class='fn'>"+ago(p.performed_at)+'</span>');
 hd.querySelector('.pn').addEventListener('click',function(){profile(p.user_id,p.name)});
