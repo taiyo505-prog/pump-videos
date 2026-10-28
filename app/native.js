@@ -57,10 +57,11 @@ function xPost(blob,text){var PS=P.PumpShare;if(!PS)return Promise.resolve(null)
  return (blob&&!isVid(blob)?b64(blob):Promise.resolve('')).then(function(d){return PS.xPost({data:d||undefined,text:text||''})}).catch(function(){return null})}
 function saveMedia(blob){var PS=P.PumpShare;if(!PS||!blob)return Promise.resolve(null);
  return b64(blob).then(function(d){return PS.saveMedia({data:d,video:isVid(blob)})}).catch(function(){return null})}
+function musicState(ask){var PS=P.PumpShare;if(!PS||!ios)return Promise.resolve(null);return PS.musicState({ask:!!ask}).catch(function(){return null})}
 window.WK_NATIVE={privacyOptions:function(){return A?A.showPrivacyOptionsForm():Promise.resolve()},
 pushRegister:function(save){pushRegister(save)},
 takeInvite:function(){var c=pendingInvite;pendingInvite=null;return c},
-shareFile:shareFile,igStory:igStory,xPost:xPost,saveMedia:saveMedia};
+shareFile:shareFile,igStory:igStory,xPost:xPost,saveMedia:saveMedia,musicState:musicState};
 
 // ---- ストアのレビュー依頼 ----
 // 自己ベストを更新した気分のいい時に出す。5日以上トレーニングした人だけ、120日に1回まで（OS 側でも年3回までに制限される）

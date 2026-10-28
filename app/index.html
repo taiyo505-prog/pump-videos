@@ -39,6 +39,7 @@ header{padding:14px 72px 12px 18px;background:#000;border-bottom:1px solid var(-
 #cd span{font-size:13px;color:var(--sub);letter-spacing:.2em}
 @keyframes cdn{0%{transform:scale(1.7);opacity:0}18%{transform:scale(1);opacity:1}80%{opacity:1}100%{transform:scale(.92);opacity:.15}}
 @media (prefers-reduced-motion:reduce){#cd b{animation:none}}
+#mus{display:flex;align-items:center;gap:8px;height:38px;padding:0 6px 0 12px;background:#000;border-bottom:1px solid var(--line)}#mus[hidden]{display:none}#musc{flex:1;min-width:0;height:28px}#must{max-width:56%;font-size:12px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#must i{font-style:normal;color:var(--sub);font-weight:400}#musx{border:0;background:none;color:var(--sub);font-size:13px;padding:6px}
 #log{flex:1;overflow-y:auto;padding:16px 14px;display:flex;flex-direction:column;gap:10px}
 .m{max-width:86%;padding:10px 13px;border-radius:18px;white-space:pre-wrap;word-break:break-word;font-size:15px}
 .me{align-self:flex-end;background:var(--me);color:var(--meink);border-bottom-right-radius:4px}
@@ -425,6 +426,7 @@ img.av{object-fit:cover;background:#222}
 <body>
 <div id="app">
 <header><div class="lgt">CHAT WORKOUT LOG</div><div class="lg">PUMP</div><div class="lab" id="prof"></div></header>
+<div id="mus" hidden><canvas id="musc" aria-hidden="true"></canvas><span id="must"></span><button id="musx" type="button" aria-label="音楽の表示を消す">✕</button></div>
 <div id="log" aria-live="polite"></div>
 <div id="tm" hidden><span id="tw" role="button" aria-label="タップで時間を大きく・小さく"><span id="tt"></span><small id="tl"></small></span><button id="tb" type="button" aria-label="休憩時間（タップで変更）"></button><button id="br" type="button">セット終わり</button><div id="brs" hidden></div><button id="tms" type="button">小さくする</button></div>
 <div id="qk" hidden></div>
@@ -1191,6 +1193,24 @@ $('shsv').addEventListener('click',function(){shMsg('');saveBlob(shBlob,shExt)})
   tm=setTimeout(function(){tm=null;try{navigator.vibrate&&navigator.vibrate(15)}catch(e){}if(t.id==='shi'||t.id==='shv')saveBlob(shBlob,shExt);else fetch(t.src).then(function(r){return r.blob()}).then(function(b){saveBlob(b,'jpg')}).catch(function(){})},550)},{passive:true});
  document.addEventListener('touchmove',function(e){if(tm){var p=e.touches[0];if(Math.abs(p.clientX-x0)+Math.abs(p.clientY-y0)>12){clearTimeout(tm);tm=null}}},{passive:true});
  ['touchend','touchcancel'].forEach(function(n){document.addEventListener(n,function(){clearTimeout(tm);tm=null},{passive:true})})})();
+
+// ---- 音楽のイコライザー（トレーニング画面） ----
+// ほかのアプリで音楽を流している間だけ、上にリズムに乗ったバーを出す。Apple Music なら曲名も（アプリ版だけ）
+// 本物の波形はとれない（iPhone はほかのアプリの音を読ませない）ので、ビートっぽく動く演出
+(function(){var box=$('mus'),cv=$('musc'),tx=$('must'),on=false,st=null,off=false,raf=0,t0=0,lv=[],N=36,asked=false;
+ function demo(){return !!window.WK_DEMO_API&&!(window.WK_NATIVE&&WK_NATIVE.musicState)}
+ function visible(){return !document.hidden&&!$('pv').classList.contains('on')&&!$('st').classList.contains('on')&&!$('ov').classList.contains('on')&&!$('sv').classList.contains('on')&&!$('app').hidden}
+ function label(){if(!st)return '';if(st.title)return '♪ '+esc(st.title)+(st.artist?' <i>— '+esc(st.artist)+'</i>':'');return st.auth==='ask'?'♪ タップで曲名を表示 <i>(Apple Music)</i>':'♪ MUSIC'}
+ function draw(ts){raf=requestAnimationFrame(draw);if(ts-t0<33)return;t0=ts;var w=cv.clientWidth,h=cv.clientHeight,dpr=window.devicePixelRatio||1;if(!w)return;if(cv.width!==Math.round(w*dpr)){cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr)}
+  var g=cv.getContext('2d'),W=cv.width,H=cv.height,bt=ts/1000*124/60,beat=Math.pow(1-(bt%1),3),bw=W/N,O=getComputedStyle(document.documentElement).getPropertyValue('--acc').trim()||'#ff5a1f';g.clearRect(0,0,W,H);g.fillStyle=O;
+  for(var i=0;i<N;i++){var c=1-Math.abs(i-(N-1)/2)/(N/2),tgt=.12+.5*c*beat+.38*Math.random()*(.4+.6*c);lv[i]=(lv[i]||0)*.55+tgt*.45;var bh=Math.max(2*dpr,lv[i]*H);g.globalAlpha=.55+.45*c;g.fillRect(i*bw+bw*.18,(H-bh)/2,bw*.64,bh)}g.globalAlpha=1}
+ function show(v){if(v===on){if(v)tx.innerHTML=label();return}on=v;box.hidden=!v;if(v){tx.innerHTML=label();if(!raf)raf=requestAnimationFrame(draw)}else{cancelAnimationFrame(raf);raf=0}}
+ function poll(ask){if(off||!visible())return show(false);
+  if(demo()){st={playing:true,title:'見本の曲',artist:'試用版'};return show(true)}
+  if(!(window.WK_NATIVE&&WK_NATIVE.musicState))return show(false);
+  WK_NATIVE.musicState(ask).then(function(r){st=r;show(!!(r&&r.playing)&&!off&&visible())})}
+ box.addEventListener('click',function(e){if(e.target.closest('#musx')){off=true;show(false);return}if(st&&st.auth==='ask'&&!asked){asked=true;poll(true)}});
+ setInterval(function(){poll(false)},2500);document.addEventListener('visibilitychange',function(){poll(false)});setTimeout(function(){poll(false)},800)})();
 
 // ---- 写真 ----
 function takePhoto(es,id){camFor={es:es,id:id};var c=$('cam');c.value='';c.click()}
