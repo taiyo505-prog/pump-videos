@@ -961,17 +961,25 @@ if(bodyTab==='w'){var goal=+get('pump-body-goal',0)||0,last=body.filter(function
  $('bsv').addEventListener('click',function(){var w=parseFloat($('bw').value),bf=parseFloat($('bf').value);if(!(w>=20&&w<=300)){$('bms').textContent='体重を入れてね（20〜300kg）。';return}if($('bf').value&&!(bf>=2&&bf<=70)){$('bms').textContent='体脂肪は2〜70%で入れてね。';return}
   if(profile){profile.w=w;save();logBody(profile.h,w,bf>0?bf:0);profUI()}else logBody(0,w,bf>0?bf:0);$('bf').value='';$('bms').textContent='記録したよ。';charts()});
  $('bgo').addEventListener('change',function(){var v=parseFloat($('bgo').value);put('pump-body-goal',v>0?v:0);charts()});return}
-wr.innerHTML="<div class='day gc'><div id='bcmp'></div><button class='hb2 bad' id='bad'>📷 写真を追加</button><input id='bfi' type='file' accept='image/*' hidden><div class='fn' id='bms'></div>"
+wr.innerHTML="<div class='day gc'><div id='bcmp'></div><button class='hb2 bad' id='bad'>📷 写真を追加（まとめて選べる）</button><input id='bfi' type='file' accept='image/*' multiple hidden><div class='fn' id='bms'></div>"
  +"<p class='fn'>写真をタップして、比べる2枚をえらんでね（撮った日が古いほうが BEFORE）。写真はこのスマホの中だけに保存。クラウドにも友達にも送らない。</p><div class='bph' id='bph'></div></div>";
 $('bad').addEventListener('click',function(){$('bfi').click()});
-$('bfi').addEventListener('change',function(){var f=this.files&&this.files[0];this.value='';if(!f)return;$('bms').textContent='保存中…';var id=Date.now(),at=id,nod=false;shotAt(f).then(function(t){if(t)at=t;else nod=true;return fitJpeg(f,1080)}).then(function(u){var x={id:id,t:at,src:u};if(nod)x.nod=1;return phDo('put',x)}).then(function(){$('bms').innerHTML=nod?"<span class='bwarn'>⚠ この写真には撮った日が入ってなかったから、追加した日（"+md(at)+"）で数えるよ。"+fixDate(id,at)+"</span>":'';bodySel.push(id);if(bodySel.length>2)bodySel.shift();return photos2()}).then(function(){$('pl').scrollTop=0}).catch(function(){$('bms').textContent='写真を保存できなかった。'})});
+$('bfi').addEventListener('change',function(){var fs=[].slice.call(this.files||[]);this.value='';if(!fs.length)return;$('bms').textContent='保存中…';var base=Date.now(),added=[],bad=0;
+ // 何枚でも選べる。1枚ずつ順番に保存する
+ fs.reduce(function(pr,f,k){return pr.then(function(){var id=base+k,at=id,nod=false;return shotAt(f).then(function(t){if(t)at=t;else nod=true;return fitJpeg(f,1080)}).then(function(u){var x={id:id,t:at,src:u};if(nod)x.nod=1;return phDo('put',x)}).then(function(){added.push({id:id,t:at,nod:nod,k:k})},function(){bad++})})},Promise.resolve())
+ .then(function(){if(!added.length){$('bms').textContent='写真を保存できなかった。';return}
+  var nd=added.filter(function(x){return x.nod});
+  $('bms').innerHTML=(bad?"<span class='bwarn'>"+bad+"枚は保存できなかった。</span>":'')+(nd.length?"<span class='bwarn'>⚠ "+(added.length>1?nd.length+'枚の写真':'この写真')+"には撮った日が入ってなかったから、追加した日（"+md(nd[0].t)+"）で数えるよ。"+nd.map(function(x){return fixDate(x.id,x.t,added.length>1?(x.k+1)+'枚目に選んだ写真':'')}).join('')+"</span>":'');
+  // 2枚以上いっぺんに入れたら、その中の一番古いのと新しいのを比べる
+  if(added.length>=2){var o=added.slice().sort(function(a,b){return a.t-b.t});bodySel=[o[0].id,o[o.length-1].id]}else{bodySel.push(added[0].id);if(bodySel.length>2)bodySel.shift()}
+  return photos2().then(function(){$('pl').scrollTop=0})}).catch(function(){$('bms').textContent='写真を保存できなかった。'})});
 $('bph').addEventListener('click',function(e){var t=e.target,it=t.closest('.bpi');if(!it)return;var id=+it.getAttribute('data-id');
  if(t.closest('[data-del]')){it.classList.add('ask');return}if(t.closest('[data-no]')){it.classList.remove('ask');return}
  if(t.closest('[data-yes]')){bodySel=bodySel.length===2&&bodySel.indexOf(id)<0?bodySel:[];phDo('del',id).then(photos2);return}if(it.classList.contains('ask'))return;
  var i=bodySel.indexOf(id);if(i>=0)bodySel.splice(i,1);else{bodySel.push(id);if(bodySel.length>2)bodySel.shift()}photos2().then(function(){if(bodySel.length===2)$('pl').scrollTop=0})});
 photos2().catch(function(){$('bph').innerHTML="<p class='fn'>この端末では写真を保存できないよ。</p>"})}
 // 撮った日がわからない写真だけ、日付を手で入れられる
-function fixDate(id,t){var d=new Date(t),v=function(n){return ('0'+n).slice(-2)},td=new Date();return "<label class='bfx'>"+md(t)+" の写真の撮った日を入れる<input type='date' data-fix='"+id+"' value='"+d.getFullYear()+'-'+v(d.getMonth()+1)+'-'+v(d.getDate())+"' max='"+td.getFullYear()+'-'+v(td.getMonth()+1)+'-'+v(td.getDate())+"'></label>"}
+function fixDate(id,t,nm){var d=new Date(t),v=function(n){return ('0'+n).slice(-2)},td=new Date();return "<label class='bfx'>"+(nm||md(t)+' の写真')+"の撮った日を入れる<input type='date' data-fix='"+id+"' value='"+d.getFullYear()+'-'+v(d.getMonth()+1)+'-'+v(d.getDate())+"' max='"+td.getFullYear()+'-'+v(td.getMonth()+1)+'-'+v(td.getDate())+"'></label>"}
 document.addEventListener('change',function(e){var el=e.target;if(!el.matches||!el.matches('input[data-fix]'))return;var id=+el.getAttribute('data-fix'),m=/^(\d{4})-(\d\d)-(\d\d)$/.exec(el.value);if(!m)return;var t=new Date(+m[1],m[2]-1,+m[3],12).getTime();if(t>Date.now()+864e5)return;
  phAll().then(function(l){var x=l.filter(function(y){return y.id===id})[0];if(!x)return;x.t=t;delete x.nod;return phDo('put',x)}).then(function(){var b=$('bms');if(b)b.textContent='撮った日を '+md(t)+' にしたよ。';return photos2()}).catch(function(){})});
 function phSrc(x){if(x.src)return x.src;try{return x.blob?URL.createObjectURL(x.blob):''}catch(e){return ''}}
@@ -983,7 +991,7 @@ function compare(l){var c=$('bcmp');if(!c)return;var p=l.filter(function(x){retu
  if(!a||!b){c.innerHTML="<div class='bnone'><b>BEFORE / AFTER</b><span>"+(l.length<2?'写真を2枚追加すると、ここに比べた画像ができるよ。':'下の写真から2枚えらぶと、ここに比べた画像ができるよ。')+'</span></div>';return}
  return Promise.all([a,b].map(function(x){return new Promise(function(res){var im=new Image();im.onload=function(){res(im)};im.onerror=function(){res(null)};im.src=phSrc(x)})})).then(function(ims){if(!ims[0]||!ims[1]){c.innerHTML="<p class='fn'>写真を読み込めなかった。✕で消して、もう一度追加してね。</p>";return}
  var cv=drawBA(a,b,ims),days=Math.round((b.t-a.t)/864e5);
- var nx=[a,b].filter(function(x){return x.nod}),nd=nx.map(function(x){return md(x.t)});c.innerHTML="<img class='bci' alt='ビフォーアフター' src='"+cv.toDataURL('image/jpeg',.92)+"'>"+(nd.length?"<p class='bwarn'>⚠ "+nd.join('・')+" の写真は撮った日が入ってなかったから、追加した日で数えてるよ。日数や体重の変化がずれることがあるで。スクショやLINEで届いた写真によくあるから、カメラで撮った元の写真を選ぶと撮った日になるよ。"+nx.map(function(x){return fixDate(x.id,x.t)}).join('')+"</p>":'')+"<button class='hb2' id='bsh'>この画像を保存・シェア</button>";$('bsh').addEventListener('click',function(){showImage(cv,days+'日間の変化💪 #筋トレ #ビフォーアフター #PUMPアプリ')})})}
+ var nx=[a,b].filter(function(x){return x.nod}),nd=nx.map(function(x){return md(x.t)});c.innerHTML="<img class='bci' alt='ビフォーアフター' src='"+cv.toDataURL('image/jpeg',.92)+"'>"+(nd.length?"<p class='bwarn'>⚠ "+nd.join('・')+" の写真は撮った日が入ってなかったから、追加した日で数えてるよ。日数や体重の変化がずれることがあるで。スクショやLINEで届いた写真によくあるから、カメラで撮った元の写真を選ぶと撮った日になるよ。"+nx.map(function(x){return fixDate(x.id,x.t,(x===a?'BEFORE':'AFTER')+' の写真')}).join('')+"</p>":'')+"<button class='hb2' id='bsh'>この画像を保存・シェア</button>";$('bsh').addEventListener('click',function(){showImage(cv,days+'日間の変化💪 #筋トレ #ビフォーアフター #PUMPアプリ')})})}
 // 保存・シェア用のビフォーアフター画像（1080×1920。ストーリーにそのまま載る縦長）
 // 写真を画面いっぱいに並べて、下に大きい数字を重ねる（ランニングアプリの記録画像みたいな見せ方）
 function drawBA(a,b,ims){var W=1080,H=1920,cv=document.createElement('canvas');cv.width=W;cv.height=H;var g=cv.getContext('2d'),O=getComputedStyle(document.documentElement).getPropertyValue('--acc').trim()||'#ff5a1f',F="'Barlow Condensed','Hiragino Sans',sans-serif";
