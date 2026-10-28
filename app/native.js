@@ -63,13 +63,17 @@ pushRegister:function(save){pushRegister(save)},
 takeInvite:function(){var c=pendingInvite;pendingInvite=null;return c},
 shareFile:shareFile,igStory:igStory,xPost:xPost,saveMedia:saveMedia,musicState:musicState};
 
-// ---- ストアのレビュー依頼 ----
-// 自己ベストを更新した気分のいい時に出す。5日以上トレーニングした人だけ、120日に1回まで（OS 側でも年3回までに制限される）
+// ---- ストアのレビュー依頼（星をタップしてそのまま送れる Apple 純正の画面） ----
+// 気分のいい時に出す: 自己ベストを更新した時か、トレーニングを「終わり」にした時。
+// 3日以上トレーニングした人だけ、60日に1回まで（OS 側でも年3回までに制限される。TestFlight 版では Apple の仕様で出ない）
 var RV=P.InAppReview,REVIEW_AT='pump-review-at';
-document.addEventListener('wk:record',function(e){if(!RV||!(e.detail&&e.detail.pr)||!window.WK)return;var W=window.WK,days={};
-(W.data||[]).forEach(function(x){days[W.dkey(x.t)]=1});if(Object.keys(days).length<5)return;
-var last=0;try{last=+localStorage.getItem(REVIEW_AT)||0}catch(_){}if(Date.now()-last<120*864e5)return;
-try{localStorage.setItem(REVIEW_AT,String(Date.now()))}catch(_){}setTimeout(function(){RV.requestReview().catch(function(){})},1500)});
+function askReview(){if(!RV||!window.WK)return;var W=window.WK,days={};
+(W.data||[]).forEach(function(x){days[W.dkey(x.t)]=1});if(Object.keys(days).length<3)return;
+var last=0;try{last=+localStorage.getItem(REVIEW_AT)||0}catch(_){}if(Date.now()-last<60*864e5)return;
+// ほかの画面（ログインのおすすめなど）が開いていたら今回は出さない
+setTimeout(function(){if(document.querySelector('.sh'))return;try{localStorage.setItem(REVIEW_AT,String(Date.now()))}catch(_){}RV.requestReview().catch(function(){})},1500)}
+document.addEventListener('wk:record',function(e){if(e.detail&&e.detail.pr)askReview()});
+document.addEventListener('wk:done',askReview);
 
 // ---- プッシュ通知（いいね・コメント・友達申請） ----
 // ログインしたら cloud.js が WK_NATIVE.pushRegister(保存する関数) を呼ぶ。通知を押したら、その画面（お知らせ・友達）を開く
