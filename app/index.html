@@ -843,7 +843,7 @@ out.push(g+(lt[g]?'（'+Math.floor((now-lt[g])/D)+'日ぶり）':'')+'\n'+lines.
 return out.join('\n\n')}
 function prList(){var best={},cnt={};data.forEach(function(e){cnt[e.name]=(cnt[e.name]||0)+1;if(!best[e.name]||e.e1>best[e.name].e1)best[e.name]=e});return Object.keys(best).sort(function(a,b){return cnt[b]-cnt[a]}).map(function(n){return best[n]})}
 function prText(){var l=prList().slice(0,10);if(!l.length)return 'まだ記録がないよ。';return '自己ベスト（推定1RM）\n'+l.map(function(e){return '・'+e.name+' '+r1(e.e1)+'kg（'+setStr(e)+'、'+md(e.t)+'）'}).join('\n')}
-function afterWorkout(td){var t0=td.length?Math.min.apply(null,td.map(function(e){return e.t}))-60000:dayStart(Date.now()),title=titleOf(td),out=[];
+function afterWorkout(td){var t0=td.length?Math.min.apply(null,td.map(function(e){return e.t})):dayStart(Date.now()),title=titleOf(td),out=[];
 var prev=null,ks={};data.forEach(function(e){if(e.t<t0)(ks[dkey(e.t)]=ks[dkey(e.t)]||[]).push(e)});Object.keys(ks).forEach(function(k){var es=ks[k];if(titleOf(es)===title&&(!prev||es[0].t>prev[0].t))prev=es});
 if(prev){var df=td.length-prev.length;out.push('前回の'+title+'（'+md(prev[0].t)+'）より '+(df>=0?'+':'')+df+'セット。'+(df>=0?'着実に積み上げてる。':'次はもう少し攻めよう。'))}
 var prs={};prEvents().forEach(function(e){if(e.t>=t0)prs[e.name]=1});var pn=Object.keys(prs);if(pn.length)out.push('今日の自己ベスト更新: '+pn.join('、')+' 🎉');
@@ -855,7 +855,8 @@ function tbl(es){var b=byName(es);return b.order.map(function(n){return "<div cl
 function recap(td){var du=sDur(td),o={};td.forEach(function(e){o[e.name]=1});return "<div class='rc'><div class='rt'>"+titleOf(td)+"</div><div class='rj'>"+titleJa(td)+'</div>'+(du?"<div class='rn'>"+hms(du)+"</div><div class='rl'>TOTAL TIME</div>":'')+"<div class='rg'><div><b>"+td.length+"</b><span>SETS</span></div><div><b>"+Object.keys(o).length+"</b><span>EXERCISES</span></div></div>"+tbl(td)+'</div>'}
 // まとめは「今日」ではなく「このトレーニング（スタートしてから）」の記録で作る（0時をまたいでも大丈夫）
 // まだ1つも記録がないときは、トレーニングを終わらせずにチャットを続けられるようにする
-function summary(){var t0=ses?ses.t0-60000:dayStart(Date.now()),td=data.filter(function(e){return e.t>=t0});
+// スタート1分前の記録まで含める。ただし前のトレーニングの記録は入れない
+function summary(){var pe=sesAll.length?sesAll[sesAll.length-1]:null,t0=ses?Math.max(ses.t0-60000,pe?pe.t0+pe.dur+1:0):dayStart(Date.now()),td=data.filter(function(e){return e.t>=t0});
 if(!td.length){add('このトレーニングの記録はまだないよ。記録してから「終わり」を送ってね。','bot');if(ses){var bx=log.lastChild,qb=document.createElement('button');qb.className='hb2';qb.textContent='記録せずに終わる';qb.addEventListener('click',function(){stOn=false;sStop();go('home')});bx.appendChild(qb)}return}
 stOn=false;sStop();add('','bot',recap(td));var cid=lastCid,box=log.lastChild;function btn(t,f){var b=document.createElement('button');b.className='hb2';b.textContent=t;b.addEventListener('click',f);box.appendChild(b)}var nt=document.createElement('div');nt.className='fn';nt.style.marginTop='10px';nt.textContent='📸 友達のフィードに載るのは写真つきの記録だけ。写真を撮るとシェアできるよ。';box.appendChild(nt);btn('📷 写真を撮って友達にシェア',function(){takePhoto(td,cid)});btn('シェア画像を作る（Instagram・X用）',function(){shareCard(td)});btn('トレーニング履歴を見る',showHist);btn('ホームへ',function(){go('home')});add('','bot',afterWorkout(td));emit('wk:done')}
 
