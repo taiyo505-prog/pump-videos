@@ -148,6 +148,7 @@ header{padding:14px 72px 12px 18px;background:#000;border-bottom:1px solid var(-
 #pk .kl{display:flex;flex-wrap:wrap;gap:6px}
 #pk.big{max-height:62vh}#pk .kq{width:100%;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:10px;padding:9px 12px;font:inherit;font-size:15px;margin-bottom:8px}
 #pk .kc{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}#pk .kc button{border:1px solid var(--line);background:var(--bot);color:var(--ink);border-radius:12px;padding:4px 4px 8px;font-size:12px;font-weight:700;line-height:1.3;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0}#pk .kc button span{width:100%;aspect-ratio:1;display:block}#pk .kc button svg,#pk .kfs svg{width:100%;height:100%;display:block}#pk .kc b{display:block;word-break:break-all;font-family:inherit;font-style:normal;font-size:12px;letter-spacing:0}#pk .kc i{font-style:normal;font-weight:400;font-size:10px;color:var(--sub)}
+#pk .kp button{padding:6px 4px 8px}#pk .kp b{font-size:15px}#pk .kbig{width:min(260px,70vw);aspect-ratio:1;margin:0 auto;background:var(--bot);border-radius:16px}#pk .kbig svg{width:100%;height:100%;display:block}#pk .kin{text-align:center;color:var(--sub);font-size:13px;margin:8px 0}#pk .kgo{width:100%;padding:13px;font-size:16px;margin:4px 0 10px}
 #pk .kfs{width:64px;height:64px;flex:none;background:var(--bot);border-radius:10px}#pk .kwh{display:flex;gap:10px;align-items:center;margin-bottom:8px}
 #hlp{flex:none;width:40px;height:40px;border-radius:50%;border:1px solid var(--acc);background:none;color:var(--acc);font-size:19px;font-weight:800;align-self:center}
 #pk .kl button{border:1px solid var(--line);background:var(--bot);color:var(--ink);border-radius:999px;padding:7px 12px;font-size:13px}
@@ -630,7 +631,7 @@ if(k==='bw'){var a=l?(l.added||0):0;[0,2.5,5,7.5,10,15,20,25].forEach(function(x
 if(!l){(k==='db'?[4,6,8,10,12,14,16,18,20,22,24,26]:[20,30,40,50,60,70,80,90,100,110,120,140]).forEach(function(x){o.push({v:x,t:fmtW(x)})});return o}
 st.forEach(function(d){var v=r1(l.w+d);if(v>0)o.push({v:v,t:fmtW(v),on:d===0})});return o}
 function pkWeight(name){var k=kind(name),l=lastOf(name);pkS={name:name,g:pkS.g};
-var h=pkHead('<b>'+esc(name)+'</b>','l')+"<div class='kwh'><span class='kfs' data-fig='"+esc(name)+"' data-part='"+esc(pkPart(name))+"'></span><span>"+(k==='bw'?'追加の重さは？':k==='db'?'重さは？（片手）':'重さは？')+(l?"<br><span style='color:var(--sub);font-size:13px'>前回 "+(k==='bw'?(l.added?'+'+l.added:'自重'):fmtW(l.w)+'kg')+'×'+l.reps+'</span>':'')+"</span></div><div class='kg2'>";
+var h=pkHead('<b>'+esc(name)+'</b>','i')+"<div class='kwh'><span class='kfs' data-fig='"+esc(name)+"' data-part='"+esc(pkPart(name))+"'></span><span>"+(k==='bw'?'追加の重さは？':k==='db'?'重さは？（片手）':'重さは？')+(l?"<br><span style='color:var(--sub);font-size:13px'>前回 "+(k==='bw'?(l.added?'+'+l.added:'自重'):fmtW(l.w)+'kg')+'×'+l.reps+'</span>':'')+"</span></div><div class='kg2'>";
 wOpts(name).forEach(function(o){h+="<button data-pw='"+o.v+"' class='"+(o.on?'on':'')+"'>"+o.t+'</button>'});
 h+="<button class='kw' data-pt='1'>✏️ 文字で入力</button></div>";pk.innerHTML=h;pk.hidden=false;pk.classList.remove('big');pk.scrollTop=0;pkFigs();log.scrollTop=log.scrollHeight}
 var BAR_EX={'ベンチプレス':1,'インクラインベンチプレス':1,'デクラインベンチプレス':1,'ナローベンチプレス':1,'スクワット':1,'フロントスクワット':1,'デッドリフト':1,'ルーマニアンデッドリフト':1,'スモウデッドリフト':1,'ベントオーバーロー':1,'オーバーヘッドプレス':1,'ミリタリープレス':1,'ヒップスラスト':1};
@@ -640,24 +641,45 @@ var h=pkHead('<b>'+esc(name)+'</b> '+(k==='bw'?(w?'+'+fmtW(w)+'kg':'自重'):fmt
 [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,20].forEach(function(r){h+="<button data-pr='"+r+"' class='"+(l&&l.reps===r?'on':'')+"'>"+r+'</button>'});
 pk.innerHTML=h+'</div>'}
 function pkPart(n){var x=EX.filter(function(e){return e[0]===n})[0];return x?x[1]:(groupOf(n)||'')}
-function pkCards(list){return "<div class='kc'>"+list.map(function(n){var pt=pkPart(n);return "<button data-pe='"+esc(n)+"'><span class='kf' data-fig='"+esc(n)+"' data-part='"+esc(pt)+"'></span><b>"+esc(n)+'</b>'+(pt?'<i>'+esc(pt)+'</i>':'')+'</button>'}).join('')+'</div>'}
+// よくやる順（一般的な人気の目安）。自分の記録が多い種目はさらに上に来る
+var PK_POP={'胸':['ベンチプレス','ダンベルプレス','インクラインベンチプレス','インクラインダンベルプレス','チェストプレス','ペックフライ','ダンベルフライ','ケーブルフライ','腕立て伏せ','ディップス','スミスマシンベンチプレス','インクラインチェストプレス','インクラインダンベルフライ'],
+ '背中':['ラットプルダウン','デッドリフト','懸垂','シーテッドロー','ベントオーバーロー','ダンベルロー','マシンロー','Tバーロー','チンアップ','バックエクステンション','アシストチンニング','ナローラットプルダウン','シュラッグ'],
+ '肩':['サイドレイズ','ショルダープレス','マシンショルダープレス','オーバーヘッドプレス','リアレイズ','フェイスプル','フロントレイズ','ケーブルサイドレイズ','アーノルドプレス','アップライトロー','マシンサイドレイズ'],
+ '腕':['アームカール','ハンマーカール','プッシュダウン','バーベルカール','EZバーカール','フレンチプレス','ライイングトライセプスエクステンション','ナロープレス','ケーブルカール','インクラインダンベルカール','プリーチャーカール','キックバック','ケーブルオーバーヘッドエクステンション'],
+ '脚':['スクワット','レッグプレス','レッグエクステンション','レッグカール','ブルガリアンスクワット','ルーマニアンデッドリフト','ランジ','ヒップスラスト','カーフレイズ','ハックスクワット','ゴブレットスクワット','スミススクワット','ヒップアブダクション','ヒップアダクション','スタンディングレッグカール'],
+ '腹':['クランチ','アブローラー','レッグレイズ','シットアップ','ハンギングレッグレイズ','アブドミナルクランチ','ケーブルクランチ','ロシアンツイスト','ハンギングニーレイズ','バイシクルクランチ'],
+ '全身':['ケトルベルスイング','バーピー','ファーマーズウォーク','クリーン','スラスター']};
+var PK_REP={'胸':'ベンチプレス','背中':'ラットプルダウン','脚':'スクワット','肩':'サイドレイズ','腕':'アームカール','腹':'クランチ','全身':'ケトルベルスイング'};
+function pkCount(){var c={},seen={};data.forEach(function(e){var k=e.name+'|'+dkey(e.t);if(!seen[k]){seen[k]=1;c[e.name]=(c[e.name]||0)+1}});return c}
+function pkSorted(g){var c=pkCount(),pop=PK_POP[g]||[],list=g==='他'?Object.keys(c).filter(function(n){return !EX.some(function(x){return x[0]===n})}):EX.filter(function(x){return x[1]===g}).map(function(x){return x[0]});
+ var rk=function(n){var i=pop.indexOf(n);return i<0?99+list.indexOf(n)/1000:i};return list.sort(function(a,b){return (c[b]||0)-(c[a]||0)||rk(a)-rk(b)})}
+function pkThumb(n,pt){return window.PUMP_FIGS?PUMP_FIGS.svg(n,pt,1):''}
+function pkCards(list){var c=pkCount();return "<div class='kc'>"+list.map(function(n){var pt=pkPart(n);return "<button data-pi='"+esc(n)+"'><span>"+pkThumb(n,pt)+"</span><b>"+esc(n)+'</b>'+(c[n]?'<i>'+c[n]+'回やった</i>':'')+'</button>'}).join('')+'</div>'}
 function pkFigs(){if(!window.PUMP_FIGS)return;[].forEach.call(pk.querySelectorAll('[data-fig]'),function(el){PUMP_FIGS.animate(el,el.getAttribute('data-fig'),el.getAttribute('data-part'))})}
-// 種目を選ぶ（イラストつき）。上の検索で名前・別名から探せる
-function pkList(g){var rec=[],seen={};for(var i=data.length-1;i>=0&&rec.length<12;i--){var n=data[i].name;if(!seen[n]){seen[n]=1;rec.push(n)}}
-g=g||(rec.length?'最近':GROUPS[0]);pkS={g:g};var tabs=(rec.length?['最近']:[]).concat(GROUPS,['全身','他']),h=pkHead('<b>種目を選ぶ</b>',null)+"<input class='kq' id='pkq' type='search' placeholder='🔍 名前で探す（例: ベンチ、カール）' autocomplete='off'><div class='kt'>";
-tabs.forEach(function(t){h+="<button data-pg='"+t+"' class='"+(t===g?'on':'')+"'>"+t+'</button>'});h+="</div><div id='pkl'>";
-var list=g==='最近'?rec:EX.filter(function(x){return x[1]===g}).map(function(x){return x[0]});
-pk.innerHTML=h+pkCards(list)+"</div><div class='kn'>イラストをタップすると、重さ→回数を選んで記録できるよ。見つからないときは文字で打ってね（ジム独自のマシンは「種目追加 名前 部位」で登録できる）</div>";pk.hidden=false;pk.classList.add('big');pk.scrollTop=0;pkFigs()}
+function pkShow(h,big){pk.innerHTML=h;pk.hidden=false;pk.classList.toggle('big',!!big);pk.scrollTop=0;pkFigs()}
+var PK_SEARCH="<input class='kq' id='pkq' type='search' placeholder='🔍 名前で探す（例: ベンチ、カール）' autocomplete='off'>";
+// ① 部位を選ぶ
+function pkParts(){var rec=[],seen={};for(var i=data.length-1;i>=0&&rec.length<9;i--){var n=data[i].name;if(!seen[n]){seen[n]=1;rec.push(n)}}pkS={rec:rec};
+ var parts=GROUPS.concat(['全身']),h=pkHead('<b>どこを鍛える？</b>',null)+PK_SEARCH+"<div id='pkl'><div class='kc kp'>";
+ h+=parts.map(function(g){return "<button data-pg='"+g+"'><span>"+pkThumb(PK_REP[g],g)+'</span><b>'+g+'</b></button>'}).join('')+'</div>';
+ if(rec.length)h+="<div class='kn'>最近やった種目</div>"+pkCards(rec);
+ h+="<div class='kn'>ジムにしかないマシンは「種目追加 名前 部位」で登録できる。登録した種目は「他」に入るよ。</div><div class='kt'><button data-pg='他'>他（自分で追加した種目）</button></div></div>";
+ pkShow(h,1)}
+// ② その部位の種目（よくやる順）
+function pkList(g){if(!g)return pkParts();pkS={g:g};var list=pkSorted(g);
+ pkShow(pkHead('<b>'+esc(g)+'</b>　よくやる順','p')+PK_SEARCH+"<div id='pkl'>"+(list.length?pkCards(list):"<p class='kn'>まだないよ。「種目追加 名前 部位」で登録できる。</p>")+"</div><div class='kn'>イラストをタップすると動きが見られるよ。</div>",1)}
+// ③ 動きを大きく見せる → これで記録
+function pkInfo(name){var pt=pkPart(name),l=lastOf(name),k=kind(name);pkS={name:name,g:pkS.g};
+ pkShow(pkHead('<b>'+esc(name)+'</b>',pkS.g?'l':'p')+"<div class='kbig' data-fig='"+esc(name)+"' data-part='"+esc(pt)+"'></div><div class='kin'>"+esc(pt||'')+(k==='db'?'・ダンベルは片手の重さで記録':'')+(l?'<br>前回 '+(k==='bw'?(l.added?'+'+l.added+'kg':'自重'):fmtW(l.w)+'kg')+'×'+l.reps+'（'+md(l.t)+'）':'')+"</div><button class='hb2 kgo' data-pe='"+esc(name)+"'>この種目で記録する →</button>",1)}
 function pkSearch(q){var l=$('pkl');if(!l)return;q=norm(q||'').toLowerCase().replace(/\s+/g,'');
- if(!q){pkList(pkS.g);return}
+ if(!q){pkS.g?pkList(pkS.g):pkParts();return}
  var hit=EX.filter(function(x){return (x[0]+','+x[2]).toLowerCase().replace(/\s+/g,'').indexOf(q)>=0}).map(function(x){return x[0]}).slice(0,30);
- [].forEach.call(pk.querySelectorAll('.kt button'),function(b){b.className=''});
- l.innerHTML=hit.length?pkCards(hit):"<p class='kn'>見つからなかった。ちがう言い方で探してみてね。</p>";pkFigs()}
+ l.innerHTML=hit.length?pkCards(hit):"<p class='kn'>見つからなかった。ちがう言い方で探してみてね。</p>"}
 function pkRecord(reps){var name=pkS.name,k=kind(name),w=pkS.w,t=k==='bw'?name+(w?' +'+fmtW(w):'')+' '+reps+'回':name+' '+fmtW(w)+' '+reps+'回';pkClose();primeAudio();add(t,'me');handle(t)}
 pk.addEventListener('input',function(e){if(e.target.id==='pkq')pkSearch(e.target.value)});
-$('hlp').addEventListener('click',function(){emit('wk:tick');if(!pk.hidden&&pk.classList.contains('big')){pkClose();return}pkList()});
+$('hlp').addEventListener('click',function(){emit('wk:tick');if(!pk.hidden&&pk.classList.contains('big')){pkClose();return}pkParts()});
 pk.addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;emit('wk:tick');var a=function(n){return b.getAttribute(n)};
-if(a('data-pc'))pkClose();else if(a('data-pb'))a('data-pb')==='l'?pkList(pkS.g):pkWeight(pkS.name);else if(a('data-pg'))pkList(a('data-pg'));else if(a('data-pe'))pkWeight(a('data-pe'));
+if(a('data-pc'))pkClose();else if(a('data-pb')){var pb=a('data-pb');pb==='p'?pkParts():pb==='l'?pkList(pkS.g):pb==='i'?pkInfo(pkS.name):pkWeight(pkS.name)}else if(a('data-pi'))pkInfo(a('data-pi'));else if(a('data-pg'))pkList(a('data-pg'));else if(a('data-pe'))pkWeight(a('data-pe'));
 else if(a('data-pw')!==null)pkReps(parseFloat(a('data-pw')));else if(a('data-pr'))pkRecord(parseInt(a('data-pr'),10));
 else if(a('data-pt')){var n=pkS.name;pkClose();inp.value=n+' ';inp.focus()}});
 
