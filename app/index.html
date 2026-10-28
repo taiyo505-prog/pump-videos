@@ -360,7 +360,7 @@ img.av{object-fit:cover;background:#222}
 .bph{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:10px 0}.bpi{position:relative;border-radius:10px;overflow:hidden;border:2px solid transparent;aspect-ratio:3/4;background:var(--bot)}.bpi.on{border-color:var(--acc)}.bpi img{width:100%;height:100%;object-fit:cover;display:block}
 .bpi span{position:absolute;left:0;right:0;bottom:0;font-size:11px;font-weight:700;padding:3px 6px;background:linear-gradient(transparent,rgba(0,0,0,.75));color:#fff}.bdl{position:absolute;top:4px;right:4px;width:24px;height:24px;border-radius:50%;border:0;background:rgba(0,0,0,.6);color:#fff;font-size:12px;line-height:24px;padding:0}
 .bci{display:block;max-width:100%;max-height:70vh;margin:8px auto;border-radius:12px}
-.btab{margin:12px 14px 0}.bad{width:100%;margin:10px 0 4px}.bnone{border:2px dashed var(--line);border-radius:14px;padding:22px 16px;text-align:center;display:flex;flex-direction:column;gap:6px}.bnone b{font-family:var(--F);font-style:italic;font-size:28px;color:var(--acc)}.bnone span{font-size:13px;color:var(--sub)}
+.bwarn{display:block;color:#ffb36b;font-size:12.5px;line-height:1.5;margin:6px 0;text-align:left}.btab{margin:12px 14px 0}.bad{width:100%;margin:10px 0 4px}.bnone{border:2px dashed var(--line);border-radius:14px;padding:22px 16px;text-align:center;display:flex;flex-direction:column;gap:6px}.bnone b{font-family:var(--F);font-style:italic;font-size:28px;color:var(--acc)}.bnone span{font-size:13px;color:var(--sub)}
 .bask{position:absolute;inset:0;background:rgba(0,0,0,.82);display:none;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:6px;text-align:center}.bask b{font-size:13px;color:#fff;margin-bottom:2px}.bask .hb2{padding:6px 8px;font-size:13px;width:90%;margin:0;min-height:0}.bpi.ask .bask{display:flex}.bpi.ask .bdl{display:none}
 .tabs.nex{overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none}.tabs.nex::-webkit-scrollbar{display:none}.tabs.nex button{flex:none}
 .nme{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;background:rgba(255,90,31,.1);border:1px solid rgba(255,90,31,.35);border-radius:14px;padding:10px 14px;margin:8px 0;font-size:13px;color:var(--sub)}
@@ -925,9 +925,8 @@ var PDB=null;
 function pdb(){if(!PDB)PDB=new Promise(function(res,rej){var r=indexedDB.open('pump-body',1);r.onupgradeneeded=function(){r.result.createObjectStore('ph',{keyPath:'id'})};r.onsuccess=function(){res(r.result)};r.onerror=function(){PDB=null;rej(r.error)}});return PDB}
 function phAll(){return pdb().then(function(db){return new Promise(function(res,rej){var q=db.transaction('ph').objectStore('ph').getAll();q.onsuccess=function(){res(q.result.sort(function(a,b){return a.t-b.t}))};q.onerror=function(){rej(q.error)}})})}
 function phDo(mode,arg){return pdb().then(function(db){return new Promise(function(res,rej){var tx=db.transaction('ph','readwrite'),st=tx.objectStore('ph');mode==='put'?st.put(arg):st.delete(arg);tx.oncomplete=function(){res()};tx.onerror=function(){rej(tx.error)}})})}
-// 写真を撮った日（JPEG の Exif の撮影日時）。読めないときはファイルの日付、それもおかしければ null
-function shotAt(file){var lm=file.lastModified>0&&file.lastModified<=Date.now()+864e5?file.lastModified:null;
- return new Promise(function(res){var r=new FileReader();r.onload=function(){try{res(exifDate(new DataView(r.result))||lm)}catch(e){res(lm)}};r.onerror=function(){res(lm)};r.readAsArrayBuffer(file.slice(0,262144))})}
+// 写真を撮った日（JPEG の Exif の撮影日時）。入っていないときは null（スクショや LINE で届いた写真など）
+function shotAt(file){return new Promise(function(res){var r=new FileReader();r.onload=function(){try{res(exifDate(new DataView(r.result)))}catch(e){res(null)}};r.onerror=function(){res(null)};r.readAsArrayBuffer(file.slice(0,262144))})}
 function exifDate(v){if(v.getUint16(0)!==0xFFD8)return null;var o=2;
  while(o+4<v.byteLength){var m=v.getUint16(o),n=v.getUint16(o+2);if(m===0xFFE1&&v.getUint32(o+4)===0x45786966){var t=o+10,le=v.getUint16(t)===0x4949;
   var u16=function(x){return v.getUint16(t+x,le)},u32=function(x){return v.getUint32(t+x,le)};
@@ -965,7 +964,7 @@ if(bodyTab==='w'){var goal=+get('pump-body-goal',0)||0,last=body.filter(function
 wr.innerHTML="<div class='day gc'><div id='bcmp'></div><button class='hb2 bad' id='bad'>📷 写真を追加</button><input id='bfi' type='file' accept='image/*' hidden><div class='fn' id='bms'></div>"
  +"<p class='fn'>写真をタップして、比べる2枚をえらんでね（撮った日が古いほうが BEFORE）。写真はこのスマホの中だけに保存。クラウドにも友達にも送らない。</p><div class='bph' id='bph'></div></div>";
 $('bad').addEventListener('click',function(){$('bfi').click()});
-$('bfi').addEventListener('change',function(){var f=this.files&&this.files[0];this.value='';if(!f)return;$('bms').textContent='保存中…';var id=Date.now(),at=id;shotAt(f).then(function(t){if(t)at=t;return fitJpeg(f,1080)}).then(function(u){return phDo('put',{id:id,t:at,src:u})}).then(function(){$('bms').textContent='';bodySel.push(id);if(bodySel.length>2)bodySel.shift();return photos2()}).then(function(){$('pl').scrollTop=0}).catch(function(){$('bms').textContent='写真を保存できなかった。'})});
+$('bfi').addEventListener('change',function(){var f=this.files&&this.files[0];this.value='';if(!f)return;$('bms').textContent='保存中…';var id=Date.now(),at=id,nod=false;shotAt(f).then(function(t){if(t)at=t;else nod=true;return fitJpeg(f,1080)}).then(function(u){var x={id:id,t:at,src:u};if(nod)x.nod=1;return phDo('put',x)}).then(function(){$('bms').innerHTML=nod?"<span class='bwarn'>⚠ この写真には撮った日が入ってなかったから、追加した日（"+md(at)+"）で数えるよ。</span>":'';bodySel.push(id);if(bodySel.length>2)bodySel.shift();return photos2()}).then(function(){$('pl').scrollTop=0}).catch(function(){$('bms').textContent='写真を保存できなかった。'})});
 $('bph').addEventListener('click',function(e){var t=e.target,it=t.closest('.bpi');if(!it)return;var id=+it.getAttribute('data-id');
  if(t.closest('[data-del]')){it.classList.add('ask');return}if(t.closest('[data-no]')){it.classList.remove('ask');return}
  if(t.closest('[data-yes]')){bodySel=bodySel.length===2&&bodySel.indexOf(id)<0?bodySel:[];phDo('del',id).then(photos2);return}if(it.classList.contains('ask'))return;
@@ -974,13 +973,13 @@ photos2().catch(function(){$('bph').innerHTML="<p class='fn'>この端末では�
 function phSrc(x){if(x.src)return x.src;try{return x.blob?URL.createObjectURL(x.blob):''}catch(e){return ''}}
 function photos2(){return phAll().then(function(l){var g=$('bph');if(!g)return;bodySel=bodySel.filter(function(id){return l.some(function(x){return x.id===id})});if(!bodySel.length&&l.length>=2)bodySel=[l[0].id,l[l.length-1].id];
  var sel=l.filter(function(x){return bodySel.indexOf(x.id)>=0}).sort(function(a,b){return a.t-b.t}).map(function(x){return x.id});
- g.innerHTML=l.map(function(x){var i=sel.indexOf(x.id),lab=i<0?'':(sel.length===2?(i?'AFTER':'BEFORE'):'えらんだ');return "<div class='bpi"+(i>=0?' on':'')+"' data-id='"+x.id+"'><img alt='' src='"+phSrc(x)+"'><span>"+md(x.t)+(lab?' '+lab:'')+"</span><button type='button' class='bdl' data-del='1' aria-label='削除'>✕</button><div class='bask'><b>この写真を<br>消す？</b><button type='button' class='hb2 dng' data-yes='1'>消す</button><button type='button' class='hb2 sec' data-no='1'>やめる</button></div></div>"}).join('');
+ g.innerHTML=l.map(function(x){var i=sel.indexOf(x.id),lab=i<0?'':(sel.length===2?(i?'AFTER':'BEFORE'):'えらんだ');return "<div class='bpi"+(i>=0?' on':'')+"' data-id='"+x.id+"'><img alt='' src='"+phSrc(x)+"'><span>"+md(x.t)+(x.nod?'⚠':'')+(lab?' '+lab:'')+"</span><button type='button' class='bdl' data-del='1' aria-label='削除'>✕</button><div class='bask'><b>この写真を<br>消す？</b><button type='button' class='hb2 dng' data-yes='1'>消す</button><button type='button' class='hb2 sec' data-no='1'>やめる</button></div></div>"}).join('');
  return compare(l)})}
 function compare(l){var c=$('bcmp');if(!c)return;var p=l.filter(function(x){return bodySel.indexOf(x.id)>=0}).sort(function(a,b){return a.t-b.t}),a=p[0],b=p[1];
  if(!a||!b){c.innerHTML="<div class='bnone'><b>BEFORE / AFTER</b><span>"+(l.length<2?'写真を2枚追加すると、ここに比べた画像ができるよ。':'下の写真から2枚えらぶと、ここに比べた画像ができるよ。')+'</span></div>';return}
  return Promise.all([a,b].map(function(x){return new Promise(function(res){var im=new Image();im.onload=function(){res(im)};im.onerror=function(){res(null)};im.src=phSrc(x)})})).then(function(ims){if(!ims[0]||!ims[1]){c.innerHTML="<p class='fn'>写真を読み込めなかった。✕で消して、もう一度追加してね。</p>";return}
  var cv=drawBA(a,b,ims),days=Math.round((b.t-a.t)/864e5);
- c.innerHTML="<img class='bci' alt='ビフォーアフター' src='"+cv.toDataURL('image/jpeg',.92)+"'><button class='hb2' id='bsh'>この画像を保存・シェア</button>";$('bsh').addEventListener('click',function(){showImage(cv,days+'日間の変化💪 #筋トレ #ビフォーアフター #PUMPアプリ')})})}
+ var nd=[a,b].filter(function(x){return x.nod}).map(function(x){return md(x.t)});c.innerHTML="<img class='bci' alt='ビフォーアフター' src='"+cv.toDataURL('image/jpeg',.92)+"'>"+(nd.length?"<p class='bwarn'>⚠ "+nd.join('・')+" の写真は撮った日が入ってなかったから、追加した日で数えてるよ。日数や体重の変化がずれることがあるで。スクショやLINEで届いた写真によくあるから、カメラで撮った元の写真を選ぶと撮った日になるよ。</p>":'')+"<button class='hb2' id='bsh'>この画像を保存・シェア</button>";$('bsh').addEventListener('click',function(){showImage(cv,days+'日間の変化💪 #筋トレ #ビフォーアフター #PUMPアプリ')})})}
 // 保存・シェア用のビフォーアフター画像（1080×1920。ストーリーにそのまま載る縦長）
 // 写真を画面いっぱいに並べて、下に大きい数字を重ねる（ランニングアプリの記録画像みたいな見せ方）
 function drawBA(a,b,ims){var W=1080,H=1920,cv=document.createElement('canvas');cv.width=W;cv.height=H;var g=cv.getContext('2d'),O=getComputedStyle(document.documentElement).getPropertyValue('--acc').trim()||'#ff5a1f',F="'Barlow Condensed','Hiragino Sans',sans-serif";
@@ -1045,7 +1044,7 @@ function backup(){hl.innerHTML='';var c=document.createElement('div'),t1=documen
 p.textContent='下の文字列を全部コピーして、メモなどに保存しておいてね。端末を変えたり、ブラウザのデータを消したりしたときは、下の欄に貼って復元できる。復元すると今の記録は置き換わるよ（写真は含まれない）。';
 t1.readOnly=true;t1.value=JSON.stringify({v:2,profile:profile,data:data,sessions:sesAll,chats:chats,body:body});b1.textContent='コピー';b1.className='hb2';
 t2.placeholder='ここに貼って復元';b2.textContent='復元';b2.className='hb2';b3.textContent='履歴にもどる';b3.className='hb2';
-b1.addEventListener('click',function(){t1.select();var ok=false;try{ok=document.execCommand('copy')}catch(e){}try{navigator.clipboard.writeText(t1.value);ok=true}catch(e){}m.textContent=ok?'コピーした。':'選択したから、長押しでコピーしてね。'});
+b1.addEventListener('click',function(){t1.select();var ok=false;try{ok=document.execCommand('copy')}catch(e){}var done=function(k){m.textContent=k?'コピーした。':'選択したから、長押しでコピーしてね。'};if(ok)return done(true);try{navigator.clipboard.writeText(t1.value).then(function(){done(true)},function(){done(false)})}catch(e){done(false)}});
 b2.addEventListener('click',function(){try{var o=JSON.parse(t2.value);if(!o||!Array.isArray(o.data)||!o.data.every(function(e){return e&&typeof e.name==='string'&&e.w>0&&e.reps>0&&e.t>0&&e.e1>0}))throw 0;data=o.data;if(o.profile&&o.profile.h&&o.profile.w)profile=o.profile;if(Array.isArray(o.sessions))sesAll=o.sessions;if(o.chats&&typeof o.chats==='object')chats=o.chats;if(Array.isArray(o.body))body=o.body;save();sSave();cSave();put(K.body,body);updateBest();profUI();showHist()}catch(e){m.textContent='読み込めなかった。コピーした文字列を全部貼ってね。'}});
 b3.addEventListener('click',showHist);
 [p,t1,b1,t2,b2,m,b3].forEach(function(x){c.appendChild(x)});hl.appendChild(c)}
@@ -1121,7 +1120,7 @@ $('shot').addEventListener('click',shOther);
 function svToast(t){var d=document.createElement('div');d.className='toast';d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.classList.add('on')},10);setTimeout(function(){d.classList.remove('on');setTimeout(function(){d.remove()},300)},2400)}
 function saveBlob(bl,ext){var N=window.WK_NATIVE;if(!bl)return;var toast=svToast;if(N&&N.saveMedia){N.saveMedia(bl).then(function(r){toast(r&&r.ok?'写真に保存したよ ✅':r&&r.denied?'写真への保存が許可されてないよ。設定アプリ →「PUMP」→「写真」で許可してね。':'保存できなかった。もう一度試してね。')});return}
  var a=document.createElement('a'),u=URL.createObjectURL(bl);a.href=u;a.download='pump-'+Date.now()+'.'+(ext||'png');document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(u)},4000);toast('保存したよ。')}
-$('shsv').addEventListener('click',function(){saveBlob(shBlob,shExt)});
+$('shsv').addEventListener('click',function(){shMsg('');saveBlob(shBlob,shExt)});
 // 長押しで保存（アプリ版。ブラウザはもともと長押しで保存できる）
 (function(){var tm=null,x0=0,y0=0;function el(t){return t&&t.closest&&t.closest('#shi,#shv,.bci')}
  document.addEventListener('touchstart',function(e){var t=el(e.target);if(!t||!document.documentElement.classList.contains('native'))return;var p=e.touches[0];x0=p.clientX;y0=p.clientY;clearTimeout(tm);
