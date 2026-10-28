@@ -156,8 +156,8 @@ M.pullthru = { a: { p: [56, 58], t: 250, h: 240, k: [50, FLOOR - 1, 1, 270], a: 
 M.boxjump = { a: o(SQB, { a: [330, 330] }), b: { p: [62, 36], t: 175, k: [70, 60, -1], a: [150, 150] }, pr: [['r', 62, 62, 26, 30]] };
 // ---- 腹 ----
 var FL = { p: [52, 86], t: 270, k: [70, FLOOR - 0.5, 1] };
-M.crunch = { a: o(FL, { a: [200, 200] }), b: o(FL, { t: 245, h: 235, a: [220, 220] }) };
-M.situp = { a: o(FL, { a: [200, 200] }), b: o(FL, { t: 165, h: 160, a: [150, 120] }) };
+M.crunch = { a: o(FL, { a: [110, 110] }), b: o(FL, { t: 235, h: 225, a: [120, 120] }) };
+M.situp = { a: o(FL, { a: [110, 110] }), b: o(FL, { t: 165, h: 160, a: [110, 100] }) };
 M.legraise = { a: { p: [50, 88], t: 270, l: [92, 92], a: [270, 270] }, b: { p: [50, 88], t: 270, l: [170, 170], a: [270, 270] } };
 M.rcrunch = { a: { p: [50, 88], t: 270, l: [130, 30, 90], a: [270, 270] }, b: { p: [50, 84], t: 280, l: [200, 120, 90], a: [270, 270] } };
 M.hlr = { a: o(M.pull.a, { l: [0, 0] }), b: o(M.pull.a, { p: [50, 61], l: [95, 95] }), pr: BAR };
@@ -231,11 +231,30 @@ function find(name, part) {
 }
 
 // ---- 描く ----
-var C = { body: '#f2f2f4', back: '#7d7d88', eq: '#ff5a1f', pr: '#4a4d57', fl: '#2a2c33' };
+// 横から決めたポーズを、少し斜め前・少し上から見た立体にして描く（両腕・両脚・バーの長さが見える）
+// 横向きの型: x=前後, y=上下, z=左右（手前が +）。正面の型（fv）はそのまま正面から描く
+var C = { body: '#f2f2f4', far: '#8a8a96', eq: '#ff5a1f', eq2: '#c2410c', pr: '#3b3e48', prTop: '#555966', prSide: '#2c2e36', fl: '#24262c', sh: 'rgba(0,0,0,.35)' };
+var YAW = 40 * Math.PI / 180, EL = 24 * Math.PI / 180, CY = Math.cos(YAW), SY = Math.sin(YAW), CE = Math.cos(EL), SE = Math.sin(EL), SC = 0.92;
+function pj(x, y, z) { var X = x - 50; return [50 + (X * CY - z * SY) * SC, 46 + ((y - 50) * CE + (X * SY + z * CY) * SE) * SC]; }
 function f1(n) { return Math.round(n * 10) / 10; }
 function ln(a, b, w, c) { return '<line x1="' + f1(a[0]) + '" y1="' + f1(a[1]) + '" x2="' + f1(b[0]) + '" y2="' + f1(b[1]) + '" stroke="' + c + '" stroke-width="' + w + '" stroke-linecap="round"/>'; }
-function cir(p, r, c, fill) { return '<circle cx="' + f1(p[0]) + '" cy="' + f1(p[1]) + '" r="' + r + '" ' + (fill ? 'fill="' + c + '"' : 'fill="none" stroke="' + c + '" stroke-width="2.4"') + '/>'; }
-function props(pr) {
+function cir(p, r, c, fill) { return '<circle cx="' + f1(p[0]) + '" cy="' + f1(p[1]) + '" r="' + r + '" ' + (fill ? 'fill="' + c + '"' : 'fill="none" stroke="' + c + '" stroke-width="2.2"') + '/>'; }
+function ell(p, rx, ry, c, fill) { return '<ellipse cx="' + f1(p[0]) + '" cy="' + f1(p[1]) + '" rx="' + f1(rx) + '" ry="' + f1(ry) + '" ' + (fill ? 'fill="' + c + '"' : 'fill="none" stroke="' + c + '" stroke-width="2"') + '/>'; }
+function poly(pts, c) { return '<polygon points="' + pts.map(function (q) { return f1(q[0]) + ',' + f1(q[1]); }).join(' ') + '" fill="' + c + '"/>'; }
+// 置いてある物を立体に（箱・棒）
+function props3(pr) {
+  return (pr || []).map(function (x) {
+    if (x[0] === 'r') {
+      var x0 = x[1], y0 = x[2], x1 = x[1] + x[3], y1 = x[2] + x[4], z0 = -9, z1 = 9;
+      var top = [pj(x0, y0, z0), pj(x1, y0, z0), pj(x1, y0, z1), pj(x0, y0, z1)], front = [pj(x0, y0, z1), pj(x1, y0, z1), pj(x1, y1, z1), pj(x0, y1, z1)], end = [pj(x1, y0, z0), pj(x1, y0, z1), pj(x1, y1, z1), pj(x1, y1, z0)];
+      return poly(end, C.prSide) + poly(front, C.pr) + poly(top, C.prTop);
+    }
+    if (x[0] === 'l') { var w = x[5] || 2; return ln(pj(x[1], x[2], -6), pj(x[3], x[4], -6), w, C.prSide) + ln(pj(x[1], x[2], 6), pj(x[3], x[4], 6), w, C.pr); }
+    if (x[0] === 'c') return ln(pj(x[1], x[2], -16), pj(x[1], x[2], 16), 2.6, C.prTop);
+    return '';
+  }).join('');
+}
+function props2(pr) {
   return (pr || []).map(function (x) {
     if (x[0] === 'r') return '<rect x="' + x[1] + '" y="' + x[2] + '" width="' + x[3] + '" height="' + x[4] + '" rx="1.5" fill="' + C.pr + '"/>';
     if (x[0] === 'l') return ln([x[1], x[2]], [x[3], x[4]], x[5] || 2, C.pr);
@@ -243,48 +262,81 @@ function props(pr) {
     return '';
   }).join('');
 }
-function equip(eq, j, anc, fv) {
-  var o = '', mid = [(j.W1[0] + j.W2[0]) / 2, (j.W1[1] + j.W2[1]) / 2];
-  if (!eq) return '';
-  if (eq === 'bb' || eq === 'smith' || eq === 'trap') { if (fv) o += ln([j.W1[0] + 14, j.W1[1]], [j.W2[0] - 14, j.W2[1]], 2.2, C.eq) + ln([j.W1[0] + 12, j.W1[1] - 6], [j.W1[0] + 12, j.W1[1] + 6], 4, C.eq) + ln([j.W2[0] - 12, j.W2[1] - 6], [j.W2[0] - 12, j.W2[1] + 6], 4, C.eq); else o += cir(mid, 7, C.eq) + cir(mid, 1.6, C.eq, 1); }
-  if (eq === 'bbf') o += ln([j.W1[0] + 6, j.W1[1]], [j.W2[0] - 6, j.W2[1]], 2.2, C.eq);
-  if (eq === 'db' || eq === 'db1') { [j.W1, eq === 'db' ? j.W2 : null].forEach(function (w) { if (w) o += '<rect x="' + f1(w[0] - 4.5) + '" y="' + f1(w[1] - 2.2) + '" width="9" height="4.4" rx="2" fill="' + C.eq + '"/>'; }); }
-  if (eq === 'kb' || eq === 'kb1') o += cir([mid[0], mid[1] + 4], 4, C.eq, 1) + cir([mid[0], mid[1] + 0.5], 2.2, C.eq);
-  if (eq === 'mb' || eq === 'plate') o += cir(eq === 'mb' ? mid : mid, eq === 'mb' ? 5 : 6, C.eq, eq === 'mb');
-  if (eq === 'wheel') o += cir([mid[0], mid[1] - 1], 4, C.eq) + cir([mid[0], mid[1] - 1], 1.2, C.eq, 1);
-  if (eq === 'hd' || eq === 'vh') o += cir(j.W1, 2.2, C.eq, 1) + cir(j.W2, 2.2, C.eq, 1);
-  if (eq === 'lm') o += ln([10, 90], mid, 2.4, C.eq) + cir(mid, 2.2, C.eq, 1);
-  if (eq === 'belt') o += ln(j.P, [j.P[0] + 2, j.P[1] + 14], 1.5, C.eq) + cir([j.P[0] + 2, j.P[1] + 17], 3.5, C.eq, 1);
+// 関節を立体に（横向きの型）。腕は肩幅、脚は腰幅だけ左右にずらす
+var ZS = { S: 7, E: 8.5, W: 8.5, P: 4, K: 4.5, A: 4.5, T: 4.5 };
+function to3(j) {
+  var o = { P: [j.P[0], j.P[1], 0], S: [j.S[0], j.S[1], 0], H: [j.H[0], j.H[1], 0] };
+  ['S', 'E', 'W', 'P', 'K', 'A', 'T'].forEach(function (n) { o[n + '1'] = [j[n + '1'][0], j[n + '1'][1], ZS[n]]; o[n + '2'] = [j[n + '2'][0], j[n + '2'][1], -ZS[n]]; });
+  return o;
+}
+function P3(v) { return pj(v[0], v[1], v[2]); }
+function equip3(eq, j3, anc) {
+  if (!eq) return { back: '', front: '' };
+  var mid = [(j3.W1[0] + j3.W2[0]) / 2, (j3.W1[1] + j3.W2[1]) / 2], b = '', f = '';
+  function bar(c, half, pr, plate) { // 左右にのびる棒＋プレート
+    var a = pj(c[0], c[1], -half), z = pj(c[0], c[1], half), rx = plate * CY * SC * 0.55;
+    b += ln(a, pj(c[0], c[1], 0), 1.8, C.eq2) + ell(pj(c[0], c[1], -pr), rx, plate, C.eq2, 1);
+    f += ln(pj(c[0], c[1], 0), z, 1.8, C.eq) + ell(pj(c[0], c[1], pr), rx, plate, C.eq, 1);
+  }
+  if (eq === 'bb' || eq === 'smith' || eq === 'trap') bar(mid, 25, 20, 6.5);
+  if (eq === 'db' || eq === 'db1') {
+    [[j3.W1, 1], eq === 'db' ? [j3.W2, -1] : null].forEach(function (q) { if (!q) return; var w = q[0], s = q[1], a = pj(w[0], w[1], w[2] - 3.5), z = pj(w[0], w[1], w[2] + 3.5), t = ln(a, z, 1.6, s > 0 ? C.eq : C.eq2) + ell(a, 1.6, 3, s > 0 ? C.eq : C.eq2, 1) + ell(z, 1.6, 3, s > 0 ? C.eq : C.eq2, 1); if (s > 0) f += t; else b += t; });
+  }
+  if (eq === 'kb' || eq === 'kb1') f += cir(pj(mid[0], mid[1] + 4, 0), 4, C.eq, 1) + cir(pj(mid[0], mid[1] + 0.5, 0), 2.2, C.eq);
+  if (eq === 'mb') f += cir(pj(mid[0], mid[1], 0), 5, C.eq, 1);
+  if (eq === 'plate') f += ell(pj(mid[0], mid[1], 0), 3, 6.5, C.eq, 1);
+  if (eq === 'wheel') { f += ell(pj(mid[0], mid[1] - 1, 0), 2.2, 4, C.eq, 1); }
+  if (eq === 'hd' || eq === 'vh') { f += cir(P3(j3.W1), 2.2, C.eq, 1); b += cir(P3(j3.W2), 2.2, C.eq2, 1); }
+  if (eq === 'lm') f += ln(pj(8, 90, 0), pj(mid[0], mid[1], 0), 2.4, C.eq) + ell(pj(8, 90, 0), 1.5, 5, C.eq, 1);
+  if (eq === 'belt') f += ln(P3(j3.P), pj(j3.P[0] + 2, j3.P[1] + 14, 0), 1.4, C.eq) + ell(pj(j3.P[0] + 2, j3.P[1] + 17, 0), 2, 4.5, C.eq, 1);
   if (/^cable|^lb$/.test(eq)) {
     var A = anc || [[90, 10]];
-    if (eq === 'lb') o += ln(A[0], mid, 1.2, C.back) + ln([mid[0] - 10, mid[1]], [mid[0] + 10, mid[1]], 2.4, C.eq);
-    else if (eq === 'cable1') o += ln(A[0], j.W1, 1.2, C.back) + cir(j.W1, 2, C.eq, 1);
-    else if (eq === 'cablef') o += ln([50, 90], mid, 1.2, C.back) + ln([j.W1[0] + 4, j.W1[1]], [j.W2[0] - 4, j.W2[1]], 2.2, C.eq);
-    else { o += ln(A[0], j.W1, 1.2, C.back) + (A[1] ? ln(A[1], j.W2, 1.2, C.back) : ''); o += cir(j.W1, 2, C.eq, 1) + (A[1] ? cir(j.W2, 2, C.eq, 1) : ''); }
-    A.forEach(function (a) { if (a) o += cir(a, 2.2, C.pr, 1); });
+    if (eq === 'lb') { b += ln(pj(A[0][0], A[0][1], 0), pj(mid[0], mid[1], 0), 1, C.far); f += ln(pj(mid[0], mid[1], -13), pj(mid[0], mid[1], 13), 2.4, C.eq); }
+    else if (eq === 'cable1') { b += ln(pj(A[0][0], A[0][1], ZS.W), P3(j3.W1), 1, C.far); f += cir(P3(j3.W1), 2, C.eq, 1); }
+    else if (eq === 'cablef') { b += ln(pj(50, 90, 0), pj(mid[0], mid[1], 0), 1, C.far); f += ln(P3(j3.W1), P3(j3.W2), 2.2, C.eq); }
+    else { b += ln(pj(A[0][0], A[0][1], ZS.W), P3(j3.W1), 1, C.far) + ln(pj(A[0][0], A[0][1], -ZS.W), P3(j3.W2), 1, C.far); f += cir(P3(j3.W1), 2, C.eq, 1); b += cir(P3(j3.W2), 2, C.eq2, 1); }
+    A.forEach(function (a) { if (a) b += cir(pj(a[0], a[1], 0), 2.2, C.prTop, 1); });
   }
-  return o;
+  return { back: b, front: f };
 }
-function body(j, fv) {
-  var o = '', w = 4.6;
-  // 奥の腕・脚（横から見たとき）は暗く
-  var bc = fv ? C.body : C.back;
-  o += ln(j.P2, j.K2, w, bc) + ln(j.K2, j.A2, w, bc) + ln(j.A2, j.T2, w * 0.8, bc);
-  if (!fv) o += ln(j.S2, j.E2, w, bc) + ln(j.E2, j.W2, w, bc);
-  o += ln(j.P, j.S, w + 1.6, C.body) + (fv ? ln(j.S1, j.S2, w, C.body) + ln(j.P1, j.P2, w, C.body) : '');
+function limb(pts, w, c) { var o = ''; for (var i = 0; i < pts.length - 1; i++) o += ln(pts[i], pts[i + 1], i === 2 ? w * 0.8 : w, c); return o; }
+function body3(j3) {
+  var w = 4.6, p = function (n) { return P3(j3[n]); };
+  var farLeg = limb([p('P2'), p('K2'), p('A2'), p('T2')], w, C.far), farArm = limb([p('S2'), p('E2'), p('W2')], w, C.far);
+  var torso = poly([p('S1'), p('S2'), p('P2'), p('P1')], C.body) + ln(p('S1'), p('S2'), w, C.body) + ln(p('P1'), p('P2'), w, C.body);
+  var nearLeg = limb([p('P1'), p('K1'), p('A1'), p('T1')], w, C.body), nearArm = limb([p('S1'), p('E1'), p('W1')], w, C.body);
+  var neck = ln(p('S'), [(p('S')[0] * 0.4 + p('H')[0] * 0.6), (p('S')[1] * 0.4 + p('H')[1] * 0.6)], 3, C.body);
+  return { far: farLeg + farArm, mid: torso + neck + cir(p('H'), L.R, C.body, 1), near: nearLeg + nearArm };
+}
+function body2(j) {
+  var w = 4.6, o = '';
+  o += ln(j.P2, j.K2, w, C.body) + ln(j.K2, j.A2, w, C.body) + ln(j.A2, j.T2, w * 0.8, C.body);
+  o += poly([j.S1, j.S2, j.P2, j.P1], C.body) + ln(j.S1, j.S2, w, C.body) + ln(j.P1, j.P2, w, C.body);
   o += ln(j.P1, j.K1, w, C.body) + ln(j.K1, j.A1, w, C.body) + ln(j.A1, j.T1, w * 0.8, C.body);
-  if (fv) o += ln(j.S2, j.E2, w, C.body) + ln(j.E2, j.W2, w, C.body);
-  o += ln(j.S1, j.E1, w, C.body) + ln(j.E1, j.W1, w, C.body);
-  o += cir(j.H, L.R, C.body, 1);
+  o += ln(j.S2, j.E2, w, C.body) + ln(j.E2, j.W2, w, C.body) + ln(j.S1, j.E1, w, C.body) + ln(j.E1, j.W1, w, C.body);
+  return o + cir(j.H, L.R, C.body, 1);
+}
+function equip2(eq, j, anc) {
+  var o = '', mid = [(j.W1[0] + j.W2[0]) / 2, (j.W1[1] + j.W2[1]) / 2];
+  if (eq === 'bb' || eq === 'smith') o += ln([j.W1[0] + 14, j.W1[1]], [j.W2[0] - 14, j.W2[1]], 2.2, C.eq) + ln([j.W1[0] + 12, j.W1[1] - 6], [j.W1[0] + 12, j.W1[1] + 6], 4, C.eq) + ln([j.W2[0] - 12, j.W2[1] - 6], [j.W2[0] - 12, j.W2[1] + 6], 4, C.eq);
+  if (eq === 'bbf') o += ln([j.W1[0] + 6, j.W1[1]], [j.W2[0] - 6, j.W2[1]], 2.2, C.eq);
+  if (eq === 'db' || eq === 'db1') [j.W1, eq === 'db' ? j.W2 : null].forEach(function (w) { if (w) o += '<rect x="' + f1(w[0] - 4.5) + '" y="' + f1(w[1] - 2.2) + '" width="9" height="4.4" rx="2" fill="' + C.eq + '"/>'; });
+  if (eq === 'kb') o += cir([mid[0], mid[1] + 4], 4, C.eq, 1) + cir([mid[0], mid[1] + 0.5], 2.2, C.eq);
+  if (eq === 'mb') o += cir(mid, 5, C.eq, 1);
+  if (eq === 'hd') o += cir(j.W1, 2.2, C.eq, 1) + cir(j.W2, 2.2, C.eq, 1);
+  if (eq === 'cablef') o += ln([50, 90], mid, 1.2, C.far) + ln([j.W1[0] + 4, j.W1[1]], [j.W2[0] - 4, j.W2[1]], 2.2, C.eq);
+  if (eq === 'cable' || eq === 'cable1') { var A = anc || [[90, 10]]; o += ln(A[0], j.W1, 1.2, C.far) + (A[1] && eq === 'cable' ? ln(A[1], j.W2, 1.2, C.far) : '') + cir(j.W1, 2, C.eq, 1) + (A[1] && eq === 'cable' ? cir(j.W2, 2, C.eq, 1) : ''); A.forEach(function (a) { if (a) o += cir(a, 2.2, C.prTop, 1); }); }
   return o;
 }
-var cache = {};
 function poses(f) { var k = f.m; if (!k._a) { k._a = fk(k.a); k._b = fk(k.b); } return [k._a, k._b]; }
 function frame(name, part, k) {
   var f = find(name, part); if (!f) return '';
   var pp = poses(f), j = lerp(pp[0], pp[1], k), fv = f.m.fv;
-  var smith = f.eq === 'smith' ? ln([j.W1[0] - 9, 2], [j.W1[0] - 9, FLOOR], 1.2, C.pr) : '';
-  return '<line x1="2" y1="' + (FLOOR + 1.5) + '" x2="98" y2="' + (FLOOR + 1.5) + '" stroke="' + C.fl + '" stroke-width="1.5"/>' + props(f.m.pr) + smith + body(j, fv) + equip(f.eq, j, f.m.anc, fv);
+  var floor = '<polygon points="' + [pj(0, FLOOR + 1, -22), pj(100, FLOOR + 1, -22), pj(100, FLOOR + 1, 22), pj(0, FLOOR + 1, 22)].map(function (q) { return f1(q[0]) + ',' + f1(q[1]); }).join(' ') + '" fill="' + C.fl + '"/>';
+  if (fv) return '<rect x="0" y="' + (FLOOR + 1) + '" width="100" height="8" fill="' + C.fl + '"/>' + props2(f.m.pr) + equip2(f.eq === 'cable1' ? 'cable1' : f.eq, j, f.m.anc).replace(/^/, '') + body2(j);
+  var j3 = to3(j), b = body3(j3), e = equip3(f.eq, j3, f.m.anc), shadow = ell(pj(j.P[0], FLOOR + 1, 0), 16 * CY, 4, C.sh, 1);
+  var smith = f.eq === 'smith' ? ln(pj(j.W1[0] - 6, 2, -18), pj(j.W1[0] - 6, FLOOR, -18), 1.4, C.pr) + ln(pj(j.W1[0] - 6, 2, 18), pj(j.W1[0] - 6, FLOOR, 18), 1.4, C.pr) : '';
+  return floor + shadow + smith + props3(f.m.pr) + e.back + b.far + b.mid + b.near + e.front;
 }
 function svg(name, part, k) { return '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' + frame(name, part, k == null ? 1 : k) + '</svg>'; }
 // 動かす: el の中の svg を、行ったり来たり（2.6秒で1往復）

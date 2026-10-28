@@ -144,6 +144,7 @@ header{padding:14px 72px 12px 18px;background:#000;border-bottom:1px solid var(-
 #pk .kg2 button.kw{grid-column:span 2;font-weight:400;font-size:13px}
 #pk .kt{display:flex;gap:6px;overflow-x:auto;margin-bottom:8px;scrollbar-width:none}
 #pk .kt button{flex:none;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:999px;padding:4px 12px;font-size:13px}
+#pk .kt2{position:sticky;top:-8px;background:var(--panel);z-index:1;padding:6px 0;margin:0 0 4px}#pk .kt2 button{padding:7px 14px;font-size:14px;font-weight:700}
 #pk .kt button.on{background:var(--acc);border-color:var(--acc);color:var(--accink);font-weight:700}
 #pk .kl{display:flex;flex-wrap:wrap;gap:6px}
 #pk.big{max-height:62vh}#pk .kq{width:100%;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:10px;padding:9px 12px;font:inherit;font-size:15px;margin-bottom:8px}
@@ -658,19 +659,18 @@ function pkCards(list){var c=pkCount();return "<div class='kc'>"+list.map(functi
 function pkFigs(){if(!window.PUMP_FIGS)return;[].forEach.call(pk.querySelectorAll('[data-fig]'),function(el){PUMP_FIGS.animate(el,el.getAttribute('data-fig'),el.getAttribute('data-part'))})}
 function pkShow(h,big){pk.innerHTML=h;pk.hidden=false;pk.classList.toggle('big',!!big);pk.scrollTop=0;pkFigs()}
 var PK_SEARCH="<input class='kq' id='pkq' type='search' placeholder='🔍 名前で探す（例: ベンチ、カール）' autocomplete='off'>";
-// ① 部位を選ぶ
-function pkParts(){var rec=[],seen={};for(var i=data.length-1;i>=0&&rec.length<9;i--){var n=data[i].name;if(!seen[n]){seen[n]=1;rec.push(n)}}pkS={rec:rec};
- var parts=GROUPS.concat(['全身']),h=pkHead('<b>どこを鍛える？</b>',null)+PK_SEARCH+"<div id='pkl'><div class='kc kp'>";
- h+=parts.map(function(g){return "<button data-pg='"+g+"'><span>"+pkThumb(PK_REP[g],g)+'</span><b>'+g+'</b></button>'}).join('')+'</div>';
- if(rec.length)h+="<div class='kn'>最近やったもの</div>"+pkCards(rec);
- h+="<div class='kn'>ジムにしかないマシンは「種目追加 名前 部位」と送ると登録できる。登録したものは下に入るよ。</div><div class='kt'><button data-pg='他'>自分で追加したもの</button></div></div>";
+// 上のタブで部位を選んで、下にその部位の絵（よくやる順）
+function pkRecent(){var rec=[],seen={};for(var i=data.length-1;i>=0&&rec.length<9;i--){var n=data[i].name;if(!seen[n]){seen[n]=1;rec.push(n)}}return rec}
+function pkParts(){var rec=pkRecent();pkList(rec.length?'最近':'胸')}
+function pkList(g){if(!g)return pkParts();var rec=pkRecent();pkS={g:g};
+ var tabs=(rec.length?['最近']:[]).concat(GROUPS,['全身','他']),h=pkHead('<b>絵で探す</b>',null)+"<div class='kt kt2'>";
+ tabs.forEach(function(t){h+="<button data-pg='"+t+"' class='"+(t===g?'on':'')+"'>"+(t==='他'?'自分で追加':t)+'</button>'});
+ var list=g==='最近'?rec:pkSorted(g);
+ h+="</div>"+PK_SEARCH+"<div id='pkl'>"+(list.length?pkCards(list):"<p class='kn'>まだないよ。ジムにしかないマシンは「種目追加 名前 部位」と送ると登録できる。</p>")+"</div><div class='kn'>"+(g==='最近'?'最近やったもの。':'よくやる順。')+"絵をタップすると動きが見られるよ。</div>";
  pkShow(h,1)}
-// ② その部位の種目（よくやる順）
-function pkList(g){if(!g)return pkParts();pkS={g:g};var list=pkSorted(g);
- pkShow(pkHead('<b>'+esc(g)+'</b>　よくやる順','p')+PK_SEARCH+"<div id='pkl'>"+(list.length?pkCards(list):"<p class='kn'>まだないよ。「種目追加 名前 部位」と送ると登録できる。</p>")+"</div><div class='kn'>絵をタップすると動きが見られるよ。</div>",1)}
 // ③ 動きを大きく見せる → これで記録
 function pkInfo(name){var pt=pkPart(name),l=lastOf(name),k=kind(name);pkS={name:name,g:pkS.g};
- pkShow(pkHead('<b>'+esc(name)+'</b>',pkS.g?'l':'p')+"<div class='kbig' data-fig='"+esc(name)+"' data-part='"+esc(pt)+"'></div><div class='kin'>"+esc(pt||'')+(k==='db'?'・ダンベルは片手の重さで記録':'')+(l?'<br>前回 '+(k==='bw'?(l.added?'+'+l.added+'kg':'自重'):fmtW(l.w)+'kg')+'×'+l.reps+'（'+md(l.t)+'）':'')+"</div><button class='hb2 kgo' data-pe='"+esc(name)+"'>これをやる！ 重さを選ぶ →</button>",1)}
+ pkShow(pkHead('<b>'+esc(name)+'</b>','l')+"<div class='kbig' data-fig='"+esc(name)+"' data-part='"+esc(pt)+"'></div><div class='kin'>"+esc(pt||'')+(k==='db'?'・ダンベルは片手の重さで記録':'')+(l?'<br>前回 '+(k==='bw'?(l.added?'+'+l.added+'kg':'自重'):fmtW(l.w)+'kg')+'×'+l.reps+'（'+md(l.t)+'）':'')+"</div><button class='hb2 kgo' data-pe='"+esc(name)+"'>これをやる！ 重さを選ぶ →</button>",1)}
 function pkSearch(q){var l=$('pkl');if(!l)return;q=norm(q||'').toLowerCase().replace(/\s+/g,'');
  if(!q){pkS.g?pkList(pkS.g):pkParts();return}
  var hit=EX.filter(function(x){return (x[0]+','+x[2]).toLowerCase().replace(/\s+/g,'').indexOf(q)>=0}).map(function(x){return x[0]}).slice(0,30);
