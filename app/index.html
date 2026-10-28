@@ -360,7 +360,7 @@ img.av{object-fit:cover;background:#222}
 .bph{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:10px 0}.bpi{position:relative;border-radius:10px;overflow:hidden;border:2px solid transparent;aspect-ratio:3/4;background:var(--bot)}.bpi.on{border-color:var(--acc)}.bpi img{width:100%;height:100%;object-fit:cover;display:block}
 .bpi span{position:absolute;left:0;right:0;bottom:0;font-size:11px;font-weight:700;padding:3px 6px;background:linear-gradient(transparent,rgba(0,0,0,.75));color:#fff}.bdl{position:absolute;top:4px;right:4px;width:24px;height:24px;border-radius:50%;border:0;background:rgba(0,0,0,.6);color:#fff;font-size:12px;line-height:24px;padding:0}
 .bci{display:block;max-width:100%;max-height:70vh;margin:8px auto;border-radius:12px}
-.bfx{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px;color:#fff;font-weight:700}.bfx input{background:var(--bot);color:var(--ink);border:1px solid var(--acc);border-radius:8px;padding:6px 8px;font-size:15px}.bwarn{display:block;color:#ffb36b;font-size:12.5px;line-height:1.5;margin:6px 0;text-align:left}.btab{margin:12px 14px 0}.bad{width:100%;margin:10px 0 4px}.bnone{border:2px dashed var(--line);border-radius:14px;padding:22px 16px;text-align:center;display:flex;flex-direction:column;gap:6px}.bnone b{font-family:var(--F);font-style:italic;font-size:28px;color:var(--acc)}.bnone span{font-size:13px;color:var(--sub)}
+.bfx{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px;color:#fff;font-weight:700}.bfx input{background:var(--bot);color:var(--ink);border:1px solid var(--acc);border-radius:8px;padding:6px 8px;font-size:15px}.btz h2{font-size:22px;margin:8px 0 4px}.bsm{position:relative}.bsm>span{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.7);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:999px;font-size:11px;font-weight:700;padding:2px 8px}.bft{border-top:1px solid var(--line);margin-top:12px;padding-top:12px}.bft>b{font-size:16px}.btzp{text-align:center;margin-top:6px}.btzb{width:100%;margin-top:14px;padding:14px;font-size:16px}.bsm>span{left:50%;right:auto;transform:translateX(-50%)}.bpr.bsm>span{position:static;transform:none;margin-left:6px;display:inline-block}.bwarn{display:block;color:#ffb36b;font-size:12.5px;line-height:1.5;margin:6px 0;text-align:left}.btab{margin:12px 14px 0}.bad{width:100%;margin:10px 0 4px}.bnone{border:2px dashed var(--line);border-radius:14px;padding:22px 16px;text-align:center;display:flex;flex-direction:column;gap:6px}.bnone b{font-family:var(--F);font-style:italic;font-size:28px;color:var(--acc)}.bnone span{font-size:13px;color:var(--sub)}
 .bask{position:absolute;inset:0;background:rgba(0,0,0,.82);display:none;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:6px;text-align:center}.bask b{font-size:13px;color:#fff;margin-bottom:2px}.bask .hb2{padding:6px 8px;font-size:13px;width:90%;margin:0;min-height:0}.bpi.ask .bask{display:flex}.bpi.ask .bdl{display:none}
 .tabs.nex{overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none}.tabs.nex::-webkit-scrollbar{display:none}.tabs.nex button{flex:none}
 .nme{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;background:rgba(255,90,31,.1);border:1px solid rgba(255,90,31,.35);border-radius:14px;padding:10px 14px;margin:8px 0;font-size:13px;color:var(--sub)}
@@ -948,10 +948,31 @@ if(sl*diff<0)return '目標まで あと'+r1(Math.abs(diff))+'kg。直近30日�
 var days=Math.ceil(diff/sl);if(days>730)return '目標まで あと'+r1(Math.abs(diff))+'kg。今のペース（週'+(wk>0?'+':'')+wk+'kg）だと2年以上かかりそう。';
 var d=new Date(now+days*864e5);return '📈 今のペース（週'+(wk>0?'+':'')+wk+'kg）なら、<b>'+(d.getMonth()+1)+'月'+d.getDate()+'日ごろ</b>（あと'+days+'日）に '+r1(goal)+'kg に届きそう。<span class=\'fn\'>※直近30日の記録からの目安</span>'}
 var bodySel=[],bodyTab=null;
-function showBody(){if(!isPro()){page('体の変化',"<div class='day gc lock'><h2>体の変化<span class='pb'>PRO</span></h2><div class='lk'><p class='fn'>📸 ビフォーアフター写真を並べて比べる<br>📉 体重と体脂肪のグラフ<br>🎯 目標体重まで、あと何日で届くかの予測<br>写真はスマホの中だけに保存するよ。</p></div><div class='lc'><b>🔒 PUMP Pro で使える</b><button class='hb2' data-go='pro'>PUMP Pro を見る</button></div></div>");return}
+function showBody(){if(!isPro()){bodyTeaser();return}
 page('体の変化',"<div class='tabs btab'><button type='button' data-bt='ph'>📸 ビフォーアフター</button><button type='button' data-bt='w'>⚖️ 体重・体脂肪</button></div><div id='bwrap'></div>");
 $('pl').querySelector('.btab').addEventListener('click',function(e){var b=e.target.closest('[data-bt]');if(b){bodyTab=b.getAttribute('data-bt');bodyRender()}});
 if(bodyTab)return bodyRender();phAll().then(function(l){bodyTab=l.length?'ph':(body.filter(function(b){return b.w>0}).length>1?'w':'ph');bodyRender()}).catch(function(){bodyTab='w';bodyRender()})}
+// Pro じゃない人向け: 何ができるかを見本つきで見せる
+function sampleFig(after){var c=document.createElement('canvas'),W=600,H=1600;c.width=W;c.height=H;var g=c.getContext('2d'),O='#ff5a1f';
+ var bg=g.createLinearGradient(0,0,0,H);bg.addColorStop(0,after?'#2a2f3a':'#2b2622');bg.addColorStop(1,'#0c0c0e');g.fillStyle=bg;g.fillRect(0,0,W,H);
+ var cx=W/2,sh=after?205:160,wa=after?105:150,hip=after?120:150;g.save();g.shadowColor=after?O:'rgba(255,255,255,.25)';g.shadowBlur=after?40:20;
+ var fg=g.createLinearGradient(cx-sh,0,cx+sh,0);fg.addColorStop(0,'#3a3d46');fg.addColorStop(.5,'#5a5e6a');fg.addColorStop(1,'#33363e');g.fillStyle=fg;
+ g.beginPath();g.arc(cx,330,95,0,Math.PI*2);g.fill();
+ g.beginPath();g.moveTo(cx-55,420);g.lineTo(cx+55,420);g.quadraticCurveTo(cx+sh,450,cx+sh,560);g.lineTo(cx+wa,900);g.lineTo(cx+hip,1060);g.lineTo(cx+hip-20,1600);g.lineTo(cx-hip+20,1600);g.lineTo(cx-hip,1060);g.lineTo(cx-wa,900);g.lineTo(cx-sh,560);g.quadraticCurveTo(cx-sh,450,cx-55,420);g.closePath();g.fill();
+ g.beginPath();g.moveTo(cx-sh,560);g.lineTo(cx-sh-(after?60:45),1000);g.lineTo(cx-sh-(after?10:5),1010);g.lineTo(cx-sh+25,640);g.closePath();g.fill();
+ g.beginPath();g.moveTo(cx+sh,560);g.lineTo(cx+sh+(after?60:45),1000);g.lineTo(cx+sh+(after?10:5),1010);g.lineTo(cx+sh-25,640);g.closePath();g.fill();g.restore();
+ return c}
+function bodyTeaser(){var now=Date.now(),a={t:now-84*864e5},b={t:now};
+ var cv=drawBA(a,b,[sampleFig(false),sampleFig(true)],{A:{w:74.2,bf:22.4},B:{w:69.6,bf:17.1},nw:46});
+ var pts=[];for(var i=0;i<=12;i++)pts.push({t:now-(84-i*7)*864e5,v:Math.round((74.2-i*0.38+(i%3?0.2:-0.15))*10)/10});
+ var gd=new Date(now+38*864e5);
+ page('体の変化',"<div class='day gc btz'><span class='pb'>PRO</span><h2>がんばった分が、目に見える。</h2><p class='fn'>体の変化を写真と数字で残して、ストーリーに載せられるカッコいい画像にするよ。</p>"
+ +"<div class='bsm'><img class='bci' alt='ビフォーアフター画像の見本' src='"+cv.toDataURL('image/jpeg',.85)+"'><span>見本</span></div>"
+ +"<div class='bft'><b>📸 ビフォーアフター画像</b><p class='fn'>写真を2枚えらぶだけ。撮った日から何日たったか、体重・体脂肪がどれだけ変わったか、その間に何日トレーニングしたかを自動で入れて、上みたいな画像にする。インスタのストーリーやXにそのまま投稿できるよ。</p></div>"
+ +"<div class='bft'><b>📉 体重・体脂肪のグラフ</b><p class='fn'>半年分の流れがひと目でわかる。</p><div class='bsm'>"+lineChart(pts,'kg')+"<span>見本</span></div></div>"
+ +"<div class='bft'><b>🎯 目標体重まであと何日か</b><p class='fn'>最近の体重の動きから、目標に届く日を予想するよ。</p><div class='bpr bsm'>このペースなら <b>"+(gd.getMonth()+1)+"月"+gd.getDate()+"日</b> ごろに <b>65kg</b> に届きそう 🔥<span>見本</span></div></div>"
+ +"<p class='fn'>🔒 写真はこのスマホの中だけに保存。クラウドにも友達にも送らないから安心してね。</p>"
+ +"<button class='hb2 btzb' data-go='pro'>PUMP Pro で使う</button><p class='fn btzp'>月300円・年2,400円（年なら月200円）。ほかにも広告なし・詳しい統計・PROバッジなどがつくよ。</p></div>")}
 function bodyRender(){var wr=$('bwrap');if(!wr)return;[].forEach.call($('pl').querySelectorAll('[data-bt]'),function(b){b.className=b.getAttribute('data-bt')===bodyTab?'on':''});
 if(bodyTab==='w'){var goal=+get('pump-body-goal',0)||0,last=body.filter(function(b){return b.w>0}).pop();
  wr.innerHTML="<div class='day gc'><h2>体重・体脂肪</h2><div class='bdr'><label>体重<input id='bw' type='number' step='0.1' min='20' max='300' inputmode='decimal' placeholder='kg' value='"+(last?last.w:'')+"'></label><label>体脂肪<input id='bf' type='number' step='0.1' min='2' max='70' inputmode='decimal' placeholder='%（任意）'></label><button class='hb2' id='bsv'>記録</button></div><div class='fn' id='bms'></div><div id='bch'></div>"
@@ -994,14 +1015,14 @@ function compare(l){var c=$('bcmp');if(!c)return;var p=l.filter(function(x){retu
  var nx=[a,b].filter(function(x){return x.nod}),nd=nx.map(function(x){return md(x.t)});c.innerHTML="<img class='bci' alt='ビフォーアフター' src='"+cv.toDataURL('image/jpeg',.92)+"'>"+(nd.length?"<p class='bwarn'>⚠ "+nd.join('・')+" の写真は撮った日が入ってなかったから、追加した日で数えてるよ。日数や体重の変化がずれることがあるで。スクショやLINEで届いた写真によくあるから、カメラで撮った元の写真を選ぶと撮った日になるよ。"+nx.map(function(x){return fixDate(x.id,x.t,(x===a?'BEFORE':'AFTER')+' の写真')}).join('')+"</p>":'')+"<button class='hb2' id='bsh'>この画像を保存・シェア</button>";$('bsh').addEventListener('click',function(){showImage(cv,days+'日間の変化💪 #筋トレ #ビフォーアフター #PUMPアプリ')})})}
 // 保存・シェア用のビフォーアフター画像（1080×1920。ストーリーにそのまま載る縦長）
 // 写真を画面いっぱいに並べて、下に大きい数字を重ねる（ランニングアプリの記録画像みたいな見せ方）
-function drawBA(a,b,ims){var W=1080,H=1920,cv=document.createElement('canvas');cv.width=W;cv.height=H;var g=cv.getContext('2d'),O=getComputedStyle(document.documentElement).getPropertyValue('--acc').trim()||'#ff5a1f',F="'Barlow Condensed','Hiragino Sans',sans-serif";
- var days=Math.max(0,Math.round((b.t-a.t)/864e5)),A=bodyAt(a.t),B=bodyAt(b.t),PH=1520,wd={};data.forEach(function(e){if(e.t>=a.t-432e5&&e.t<=b.t+432e5)wd[dkey(e.t)]=1});var nw=Object.keys(wd).length;
+function drawBA(a,b,ims,sm){var W=1080,H=1920,cv=document.createElement('canvas');cv.width=W;cv.height=H;var g=cv.getContext('2d'),O=getComputedStyle(document.documentElement).getPropertyValue('--acc').trim()||'#ff5a1f',F="'Barlow Condensed','Hiragino Sans',sans-serif";
+ var days=Math.max(0,Math.round((b.t-a.t)/864e5)),A=sm?sm.A:bodyAt(a.t),B=sm?sm.B:bodyAt(b.t),PH=1520,wd={};data.forEach(function(e){if(e.t>=a.t-432e5&&e.t<=b.t+432e5)wd[dkey(e.t)]=1});var nw=sm?sm.nw:Object.keys(wd).length;
  function ymd(t){var d=new Date(t);return d.getFullYear()+'.'+(d.getMonth()+1)+'.'+d.getDate()}
  function sg(v,u){v=Math.round(v*10)/10;return (v>0?'+':v<0?'−':'±')+Math.abs(v)+u}
  function txt(t,x,y,font,col,al){g.font=font;g.fillStyle=col;g.textAlign=al||'center';g.fillText(t,x,y)}
  g.fillStyle='#000';g.fillRect(0,0,W,H);
  // 写真（左右いっぱい）
- [0,1].forEach(function(i){var im=ims[i],px=i*W/2,pw=W/2,k=Math.max(pw/im.naturalWidth,PH/im.naturalHeight),sw=pw/k,sh=PH/k;g.drawImage(im,(im.naturalWidth-sw)/2,(im.naturalHeight-sh)/2,sw,sh,px,0,pw,PH)});
+ [0,1].forEach(function(i){var im=ims[i],iw=im.naturalWidth||im.width,ih=im.naturalHeight||im.height,px=i*W/2,pw=W/2,k=Math.max(pw/iw,PH/ih),sw=pw/k,sh=PH/k;g.drawImage(im,(iw-sw)/2,(ih-sh)/2,sw,sh,px,0,pw,PH)});
  g.fillStyle='#000';g.fillRect(W/2-3,0,6,PH);
  var gt=g.createLinearGradient(0,0,0,340);gt.addColorStop(0,'rgba(0,0,0,.7)');gt.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=gt;g.fillRect(0,0,W,340);
  var gb=g.createLinearGradient(0,PH-700,0,PH);gb.addColorStop(0,'rgba(0,0,0,0)');gb.addColorStop(.75,'rgba(0,0,0,.85)');gb.addColorStop(1,'#000');g.fillStyle=gb;g.fillRect(0,PH-700,W,700);
@@ -1042,7 +1063,7 @@ var mx=Math.max.apply(null,ms.map(function(x){return x.v}).concat([1])),cur=ms[1
 var bars="<div class='vb'>"+ms.map(function(x){return "<div><i style='height:"+Math.round(x.v/mx*100)+"%'></i><span>"+(x.m+1)+'</span></div>'}).join('')+'</div>';
 var sum="<div class='fn'>今月 "+cur+'セット'+(prev>0?'（先月比 '+(cur>=prev?'+':'')+(cur-prev)+'セット）':'')+'</div>';
 if(isPro())return "<div class='day gc'><h2>月別のセット数<span class='pb'>PRO</span></h2>"+bars+sum+'</div>';
-return "<div class='day gc lock'><h2>月別のセット数<span class='pb'>PRO</span></h2><div class='lk'>"+bars+sum+"</div><div class='lc'><b>🔒 PUMP Pro で見られる</b><button class='hb2' data-go='pro'>PUMP Pro を見る</button></div></div>"}
+return "<div class='day gc lock'><h2>月別のセット数<span class='pb'>PRO</span></h2><div class='lk'>"+bars+sum+"</div><div class='lc'><b>🔒 PUMP Pro で見られる</b><span class='fn'>月ごとにどれだけセットをこなしたか、前の月より増えたかがひと目でわかるよ。</span><button class='hb2' data-go='pro'>PUMP Pro を見る</button></div></div>"}
 $('pl').addEventListener('click',function(e){var b=e.target.closest('[data-gp]');if(!b)return;var v=parseInt(b.getAttribute('data-gp'),10);if(v!==7&&!isPro()){go('pro');return}gp=v;$('gpc').innerHTML=groupCard()});
 
 // ---- PUMP Pro ----
