@@ -139,6 +139,8 @@ function equip(eq, j, m, put) {
   if (eq === 'ez') bar(M2, 18, 14, 5.5);
   if (eq === 'db') { db(j.W1, C.eq); db(j.W2, C.eqd, -0.5); }
   if (eq === 'db1') db(j.W1, C.eq);
+  // ハンマーグリップ: ダンベルの向きは前腕に直角（縦向き）
+  if (eq === 'dbh') [[j.W1, j.E1, C.eq, 0.4], [j.W2, j.E2, C.eqd, -0.5]].forEach(function (q) { var f = nrm([q[0][0] - q[1][0], q[0][1] - q[1][1], 0]), ax = [-f[1], f[0], 0], a = add(q[0], ax, -3.8), b = add(q[0], ax, 3.8); put(dep(q[0]) + q[3], ln(pj(a), pj(b), 1.8, q[2]) + disc(a, 2.7, 'z', q[2], 6) + disc(b, 2.7, 'z', q[2], 6)); });
   if (eq === 'dbm') { var c0 = M2; put(dep(c0) + 1, ln(pj([c0[0], c0[1] - 4, c0[2]]), pj([c0[0], c0[1] + 4, c0[2]]), 2, C.eq) + disc([c0[0], c0[1] - 4, c0[2]], 3.2, 'y', C.eq, 8) + disc([c0[0], c0[1] + 4, c0[2]], 3.2, 'y', C.eq, 8)); }
   if (eq === 'kb' || eq === 'kb1') { var kc = eq === 'kb' ? [M2[0], M2[1] + 4, M2[2]] : [j.W1[0], j.W1[1] + 4, j.W1[2]]; put(dep(kc) + 1, circ(pj(kc), 4.2 * SC, C.eq) + '<circle cx="' + f1(pj([kc[0], kc[1] - 4, kc[2]])[0]) + '" cy="' + f1(pj([kc[0], kc[1] - 4, kc[2]])[1]) + '" r="2" fill="none" stroke="' + C.eq + '" stroke-width="1.6"/>'); }
   if (eq === 'mb') put(dep(M2) + 1, circ(pj(M2), 5 * SC, C.eq));
@@ -255,6 +257,7 @@ M.yraise = { a: o(ST, { a: [[10, 12], [10, 10]] }), b: o(ST, { a: [[160, 32], [1
 
 // ---- 腕 ----
 M.curl = { a: o(ST, { a: [[6, 10], [8, 8]] }), b: o(ST, { a: [[6, 10], [158, 4]] }), eq: 'db' };
+M.hammer = { a: o(ST, { a: [[6, 10], [20, 8]] }), b: o(ST, { a: [[10, 10], [122, 6]] }), eq: 'dbh' };
 M.bbcurl = { a: o(ST, { a: [[6, 8], [8, 6]] }), b: o(ST, { a: [[6, 8], [158, 4]] }), eq: 'ez' };
 M.ccurl = { a: o(ST, { a: [[6, 8], [14, 6]] }), b: o(ST, { a: [[6, 8], [158, 4]] }), eq: 'cablef', anc: [[80, 88, 0]], pr: [['t', 84, 0, 60]] };
 M.mcurl = { a: o(SITC, { a: [[60, 10], [70, 6]] }), b: o(SITC, { a: [[60, 10], [196, 4]] }), eq: 'hd', pr: SEAT(42, false).concat([['s', 50, 56, 64, 64, 9, 3]]) };
@@ -358,7 +361,7 @@ var EX = {
   'ショルダープレス': 'sp', 'オーバーヘッドプレス': 'ohp', 'マシンショルダープレス': 'msp', 'スミスショルダープレス': 'sp:smith', 'アーノルドプレス': 'sp', 'ビハインドネックプレス': 'bnp',
   'サイドレイズ': 'lraise', 'ケーブルサイドレイズ': 'clraise', 'マシンサイドレイズ': 'lraise:hd', 'フロントレイズ': 'fraise', 'リアレイズ': 'rfly', 'アップライトロー': 'urow', 'ケーブルアップライトロー': 'urow:cablef',
   'パイクプッシュアップ': 'pike', '逆立ち腕立て': 'hspu', 'ランドマインショルダープレス': 'landmine', 'Yレイズ': 'yraise',
-  'アームカール': 'curl', 'バーベルカール': 'bbcurl', 'EZバーカール': 'bbcurl', 'ハンマーカール': 'curl', 'インクラインダンベルカール': 'icurl', 'プリーチャーカール': 'preacher', 'コンセントレーションカール': 'conc',
+  'アームカール': 'curl', 'バーベルカール': 'bbcurl', 'EZバーカール': 'bbcurl', 'ハンマーカール': 'hammer', 'インクラインダンベルカール': 'icurl', 'プリーチャーカール': 'preacher', 'コンセントレーションカール': 'conc',
   'ケーブルカール': 'ccurl', 'マシンカール': 'mcurl', 'スパイダーカール': 'spider', 'ドラッグカール': 'drag', 'リバースカール': 'bbcurl', 'ゾットマンカール': 'curl',
   'ナロープレス': 'bench', 'フレンチプレス': 'french', 'ライイングトライセプスエクステンション': 'skull', 'プッシュダウン': 'pushdown', 'キックバック': 'kick', 'ケーブルキックバック': 'ckick',
   'リバースプッシュダウン': 'pushdown', 'ケーブルオーバーヘッドエクステンション': 'cohe', 'ベンチディップス': 'bdip', 'ナロープッシュアップ': 'push', 'ディップスマシン': 'dipm', 'リストカール': 'wrist', 'リバースリストカール': 'wrist',
