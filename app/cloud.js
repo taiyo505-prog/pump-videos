@@ -167,7 +167,7 @@ async function toggleLike(force){if(force&&liked)return;liked=!liked;nl+=liked?1
 // 1回タップ: メニューの表示/非表示、2回タップ: いいね
 var lastTap=0,tapT=null;ph.addEventListener('click',function(){var n=Date.now();if(n-lastTap<350){clearTimeout(tapT);tapT=null;var b=ph.querySelector('.burst');b.classList.remove('go');void b.offsetWidth;b.classList.add('go');toggleLike(true);lastTap=0;return}
 lastTap=n;tapT=setTimeout(function(){var o=ph.querySelector('.pov');if(o)o.classList.toggle('off')},360)});
-paint();acts.appendChild(lb);acts.appendChild(cb);acts.appendChild(h('span',{class:'pst'},esc(p.title)+(p.duration_ms?' · ⏱'+W.hms(p.duration_ms):'')+' · '+p.sets+'セット'));acts.appendChild(btn('⤓ 保存','pl2 psv',function(){savePost(p)}));c.appendChild(acts);
+paint();acts.appendChild(lb);acts.appendChild(cb);acts.appendChild(h('span',{class:'pst'},esc(p.title)+(p.duration_ms?' · ⏱'+W.hms(p.duration_ms):'')+' · '+p.sets+'セット'));acts.appendChild(btn('⤓ 保存・共有','pl2 psv',function(){savePost(p)}));c.appendChild(acts);
 var ex=h('details',{class:'pex'},"<summary>"+esc(p.title_ja||p.title)+'のメニュー（'+p.sets+'セット）</summary>'+(p.exercises||[]).map(function(x){return "<div class='ex'><div class='en'>"+esc(x.name)+(x.db?' <i>片手</i>':'')+"</div><div class='sets'>"+(x.sets||[]).map(function(s){return '<span>'+esc(s)+'</span>'}).join('')+'</div></div>'}).join(''));c.appendChild(ex);
 var cm=h('div',{class:'pcm'}),list=h('div'),loaded=false;cm.appendChild(list);
 var chips=h('div',{class:'qc'});QUICK.forEach(function(q){chips.appendChild(btn(q,'',function(){postComment(q)}))});cm.appendChild(chips);
