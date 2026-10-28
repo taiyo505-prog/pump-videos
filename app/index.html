@@ -925,6 +925,18 @@ var PDB=null;
 function pdb(){if(!PDB)PDB=new Promise(function(res,rej){var r=indexedDB.open('pump-body',1);r.onupgradeneeded=function(){r.result.createObjectStore('ph',{keyPath:'id'})};r.onsuccess=function(){res(r.result)};r.onerror=function(){PDB=null;rej(r.error)}});return PDB}
 function phAll(){return pdb().then(function(db){return new Promise(function(res,rej){var q=db.transaction('ph').objectStore('ph').getAll();q.onsuccess=function(){res(q.result.sort(function(a,b){return a.t-b.t}))};q.onerror=function(){rej(q.error)}})})}
 function phDo(mode,arg){return pdb().then(function(db){return new Promise(function(res,rej){var tx=db.transaction('ph','readwrite'),st=tx.objectStore('ph');mode==='put'?st.put(arg):st.delete(arg);tx.oncomplete=function(){res()};tx.onerror=function(){rej(tx.error)}})})}
+// 写真を撮った日（JPEG の Exif の撮影日時）。読めないときはファイルの日付、それもおかしければ null
+function shotAt(file){var lm=file.lastModified>0&&file.lastModified<=Date.now()+864e5?file.lastModified:null;
+ return new Promise(function(res){var r=new FileReader();r.onload=function(){try{res(exifDate(new DataView(r.result))||lm)}catch(e){res(lm)}};r.onerror=function(){res(lm)};r.readAsArrayBuffer(file.slice(0,262144))})}
+function exifDate(v){if(v.getUint16(0)!==0xFFD8)return null;var o=2;
+ while(o+4<v.byteLength){var m=v.getUint16(o),n=v.getUint16(o+2);if(m===0xFFE1&&v.getUint32(o+4)===0x45786966){var t=o+10,le=v.getUint16(t)===0x4949;
+  var u16=function(x){return v.getUint16(t+x,le)},u32=function(x){return v.getUint32(t+x,le)};
+  var tag=function(ifd,id){var c=u16(ifd);for(var i=0;i<c;i++){var e=ifd+2+i*12;if(u16(e)===id)return e}return -1};
+  var str=function(e){var off=u32(e+8),q='';for(var i=0;i<19;i++)q+=String.fromCharCode(v.getUint8(t+off+i));return q};
+  var ifd0=u32(4),ex=tag(ifd0,0x8769),e=-1;if(ex>=0)e=tag(u32(ex+8),0x9003);if(e<0)e=tag(ifd0,0x0132);if(e<0)return null;
+  var d=str(e).match(/^(\d{4}):(\d\d):(\d\d) (\d\d):(\d\d):(\d\d)/);if(!d)return null;
+  var ts=new Date(+d[1],d[2]-1,+d[3],+d[4],+d[5],+d[6]).getTime();return ts>9466848e5&&ts<=Date.now()+864e5?ts:null}
+  if((m&0xFF00)!==0xFF00)return null;o+=2+n}return null}
 function fitJpeg(file,max){return new Promise(function(res,rej){var u=URL.createObjectURL(file),im=new Image();im.onload=function(){URL.revokeObjectURL(u);var k=Math.min(1,max/Math.max(im.naturalWidth,im.naturalHeight)),c=document.createElement('canvas');c.width=Math.round(im.naturalWidth*k);c.height=Math.round(im.naturalHeight*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);var u2=c.toDataURL('image/jpeg',.85);u2&&u2.length>100?res(u2):rej()};im.onerror=function(){URL.revokeObjectURL(u);rej()};im.src=u})}
 function bodyAt(t){var best=null;body.forEach(function(b){if(b.w>0&&Math.abs(b.t-t)<4*864e5&&(!best||Math.abs(b.t-t)<Math.abs(best.t-t)))best=b});return best}
 // 直近30日の体重の傾き（kg/日）から、目標に届く日を見積もる
@@ -951,9 +963,9 @@ if(bodyTab==='w'){var goal=+get('pump-body-goal',0)||0,last=body.filter(function
   if(profile){profile.w=w;save();logBody(profile.h,w,bf>0?bf:0);profUI()}else logBody(0,w,bf>0?bf:0);$('bf').value='';$('bms').textContent='記録したよ。';charts()});
  $('bgo').addEventListener('change',function(){var v=parseFloat($('bgo').value);put('pump-body-goal',v>0?v:0);charts()});return}
 wr.innerHTML="<div class='day gc'><div id='bcmp'></div><button class='hb2 bad' id='bad'>📷 写真を追加</button><input id='bfi' type='file' accept='image/*' hidden><div class='fn' id='bms'></div>"
- +"<p class='fn'>写真をタップして、比べる2枚をえらんでね（古いほうが BEFORE）。写真はこのスマホの中だけに保存。クラウドにも友達にも送らない。</p><div class='bph' id='bph'></div></div>";
+ +"<p class='fn'>写真をタップして、比べる2枚をえらんでね（撮った日が古いほうが BEFORE）。写真はこのスマホの中だけに保存。クラウドにも友達にも送らない。</p><div class='bph' id='bph'></div></div>";
 $('bad').addEventListener('click',function(){$('bfi').click()});
-$('bfi').addEventListener('change',function(){var f=this.files&&this.files[0];this.value='';if(!f)return;$('bms').textContent='保存中…';var id=Date.now();fitJpeg(f,1080).then(function(u){return phDo('put',{id:id,t:id,src:u})}).then(function(){$('bms').textContent='';bodySel.push(id);if(bodySel.length>2)bodySel.shift();return photos2()}).then(function(){$('pl').scrollTop=0}).catch(function(){$('bms').textContent='写真を保存できなかった。'})});
+$('bfi').addEventListener('change',function(){var f=this.files&&this.files[0];this.value='';if(!f)return;$('bms').textContent='保存中…';var id=Date.now(),at=id;shotAt(f).then(function(t){if(t)at=t;return fitJpeg(f,1080)}).then(function(u){return phDo('put',{id:id,t:at,src:u})}).then(function(){$('bms').textContent='';bodySel.push(id);if(bodySel.length>2)bodySel.shift();return photos2()}).then(function(){$('pl').scrollTop=0}).catch(function(){$('bms').textContent='写真を保存できなかった。'})});
 $('bph').addEventListener('click',function(e){var t=e.target,it=t.closest('.bpi');if(!it)return;var id=+it.getAttribute('data-id');
  if(t.closest('[data-del]')){it.classList.add('ask');return}if(t.closest('[data-no]')){it.classList.remove('ask');return}
  if(t.closest('[data-yes]')){bodySel=bodySel.length===2&&bodySel.indexOf(id)<0?bodySel:[];phDo('del',id).then(photos2);return}if(it.classList.contains('ask'))return;
