@@ -436,7 +436,7 @@ img.av{object-fit:cover;background:#222}
 <div id="tm" hidden><span id="tw" role="button" aria-label="タップで時間を大きく・小さく"><span id="tt"></span><small id="tl"></small></span><button id="tb" type="button" aria-label="休憩時間（タップで変更）"></button><button id="br" type="button">セット終わり</button><div id="brs" hidden></div><button id="tms" type="button">小さくする</button></div>
 <div id="qk" hidden></div>
 <div id="pk" hidden></div>
-<div id="bar"><button id="hlp" type="button" aria-label="種目をイラストで探す">？</button><input id="in" placeholder="例: ダンベルプレス 40 8回" autocomplete="off" enterkeyhint="send"><button id="send">記録</button></div>
+<div id="bar"><button id="hlp" type="button" aria-label="名前がわからないときは絵で探す">？</button><input id="in" placeholder="例: ダンベルプレス 40 8回" autocomplete="off" enterkeyhint="send"><button id="send">記録</button></div>
 </div>
 
 <input id="cam" type="file" accept="image/*" capture="environment" hidden>
@@ -540,7 +540,7 @@ function titleJa(es){var o=grp(es);return o.length?(o.length>=4?'全身':o.join(
 
 // ---- チャット ----
 function add(text,cls,html,noSave){var d=document.createElement('div');d.className='m '+cls;if(html)d.innerHTML=html;else d.textContent=text;log.appendChild(d);log.scrollTop=log.scrollHeight;var cid=ses?ses.t0:lastCid;if(!noSave&&cid&&(cls==='me'||html)){(chats[cid]=chats[cid]||[]).push({c:cls,t:text,h:html||''});cSave()}}
-function renderChat(){log.innerHTML='';var a=(ses&&chats[ses.t0])||[];if(a.length)a.forEach(function(m){add(m.t,m.c,m.h,true)});else add('種目と重さ・回数を送ってね。ダンベルは片手の重さだよ。\n例: ダンベルプレス 40 8回\n文字を打たなくても、下の「🔍 種目」→ 重さ → 回数のボタンだけで記録できるよ。\n「おすすめ」「分析」と送るとコーチが答えるよ。','bot',null,true)}
+function renderChat(){log.innerHTML='';var a=(ses&&chats[ses.t0])||[];if(a.length)a.forEach(function(m){add(m.t,m.c,m.h,true)});else add('種目と重さ・回数を送ってね。ダンベルは片手の重さだよ。\n例: ダンベルプレス 40 8回\n名前がわからないときは、左下の「？」か「🔍 絵で探す」から絵で選べるよ。重さ → 回数のボタンだけで記録できる。\n「おすすめ」「分析」と送るとコーチが答えるよ。','bot',null,true)}
 function mrow(m){return "<div class='m "+m.c+"' style='max-width:100%;margin:6px 0'>"+(m.h||esc(m.t))+'</div>'}
 function transcript(k){var ids=Object.keys(chats).filter(function(i){return /^\d+$/.test(i)&&dkey(+i)===k}).sort(),h='';ids.forEach(function(i){var t=new Date(+i);h+="<div class='sk'>"+t.getHours()+':'+('0'+t.getMinutes()).slice(-2)+' START</div>'+chats[i].map(mrow).join('')});if(chats[k])h+=chats[k].map(mrow).join('');return h||'<div>この日のチャットは保存されてないよ。</div>'}
 // ヘッダーはロゴだけ（その日の部位などは出さない）
@@ -598,7 +598,7 @@ $('tb').addEventListener('click',brsToggle);
 function lastStr(e){return e.bw?e.name+' '+(e.added?'+'+e.added+' ':'')+e.reps+'回':e.name+' '+r1(e.w)+' '+e.reps+'回'}
 function qkUI(){brsUI();var q=$('qk');if(!ses||!profile){q.hidden=true;if(pk)pkClose();return}var names=[],seen={},i,h='';for(i=data.length-1;i>=0&&names.length<8;i--){var n=data[i].name;if(!seen[n]){seen[n]=1;names.push(n)}}var last=data[data.length-1];
 if(last)h+="<button class='q1' data-x='"+esc(lastStr(last))+"'>↻ 前回と同じ</button>";
-h+="<button data-pick='1'>🔍 種目</button>";
+h+="<button data-pick='1'>🔍 絵で探す</button>";
 names.forEach(function(n){h+="<button data-ex='"+esc(n)+"'>"+esc(n)+'</button>'});
 h+="<button data-x='おすすめ'>📋 おすすめ</button><button data-x='取り消し'>取り消し</button><button data-x='終わり'>終わり</button>";
 q.innerHTML=h;q.hidden=false}
@@ -662,15 +662,15 @@ var PK_SEARCH="<input class='kq' id='pkq' type='search' placeholder='🔍 名前
 function pkParts(){var rec=[],seen={};for(var i=data.length-1;i>=0&&rec.length<9;i--){var n=data[i].name;if(!seen[n]){seen[n]=1;rec.push(n)}}pkS={rec:rec};
  var parts=GROUPS.concat(['全身']),h=pkHead('<b>どこを鍛える？</b>',null)+PK_SEARCH+"<div id='pkl'><div class='kc kp'>";
  h+=parts.map(function(g){return "<button data-pg='"+g+"'><span>"+pkThumb(PK_REP[g],g)+'</span><b>'+g+'</b></button>'}).join('')+'</div>';
- if(rec.length)h+="<div class='kn'>最近やった種目</div>"+pkCards(rec);
- h+="<div class='kn'>ジムにしかないマシンは「種目追加 名前 部位」で登録できる。登録した種目は「他」に入るよ。</div><div class='kt'><button data-pg='他'>他（自分で追加した種目）</button></div></div>";
+ if(rec.length)h+="<div class='kn'>最近やったもの</div>"+pkCards(rec);
+ h+="<div class='kn'>ジムにしかないマシンは「種目追加 名前 部位」と送ると登録できる。登録したものは下に入るよ。</div><div class='kt'><button data-pg='他'>自分で追加したもの</button></div></div>";
  pkShow(h,1)}
 // ② その部位の種目（よくやる順）
 function pkList(g){if(!g)return pkParts();pkS={g:g};var list=pkSorted(g);
- pkShow(pkHead('<b>'+esc(g)+'</b>　よくやる順','p')+PK_SEARCH+"<div id='pkl'>"+(list.length?pkCards(list):"<p class='kn'>まだないよ。「種目追加 名前 部位」で登録できる。</p>")+"</div><div class='kn'>イラストをタップすると動きが見られるよ。</div>",1)}
+ pkShow(pkHead('<b>'+esc(g)+'</b>　よくやる順','p')+PK_SEARCH+"<div id='pkl'>"+(list.length?pkCards(list):"<p class='kn'>まだないよ。「種目追加 名前 部位」と送ると登録できる。</p>")+"</div><div class='kn'>絵をタップすると動きが見られるよ。</div>",1)}
 // ③ 動きを大きく見せる → これで記録
 function pkInfo(name){var pt=pkPart(name),l=lastOf(name),k=kind(name);pkS={name:name,g:pkS.g};
- pkShow(pkHead('<b>'+esc(name)+'</b>',pkS.g?'l':'p')+"<div class='kbig' data-fig='"+esc(name)+"' data-part='"+esc(pt)+"'></div><div class='kin'>"+esc(pt||'')+(k==='db'?'・ダンベルは片手の重さで記録':'')+(l?'<br>前回 '+(k==='bw'?(l.added?'+'+l.added+'kg':'自重'):fmtW(l.w)+'kg')+'×'+l.reps+'（'+md(l.t)+'）':'')+"</div><button class='hb2 kgo' data-pe='"+esc(name)+"'>この種目で記録する →</button>",1)}
+ pkShow(pkHead('<b>'+esc(name)+'</b>',pkS.g?'l':'p')+"<div class='kbig' data-fig='"+esc(name)+"' data-part='"+esc(pt)+"'></div><div class='kin'>"+esc(pt||'')+(k==='db'?'・ダンベルは片手の重さで記録':'')+(l?'<br>前回 '+(k==='bw'?(l.added?'+'+l.added+'kg':'自重'):fmtW(l.w)+'kg')+'×'+l.reps+'（'+md(l.t)+'）':'')+"</div><button class='hb2 kgo' data-pe='"+esc(name)+"'>これをやる！ 重さを選ぶ →</button>",1)}
 function pkSearch(q){var l=$('pkl');if(!l)return;q=norm(q||'').toLowerCase().replace(/\s+/g,'');
  if(!q){pkS.g?pkList(pkS.g):pkParts();return}
  var hit=EX.filter(function(x){return (x[0]+','+x[2]).toLowerCase().replace(/\s+/g,'').indexOf(q)>=0}).map(function(x){return x[0]}).slice(0,30);
