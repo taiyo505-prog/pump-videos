@@ -19,6 +19,8 @@ function fromInfo(info){return !!(info&&info.entitlements&&info.entitlements.act
 
 
 var FEATURES=[
+  ['📸','体の変化','ビフォーアフター写真を並べて比べる・体脂肪のグラフ・目標体重まであと何日かの予測。写真はスマホの中だけに保存。'],
+  ['🏅','PROバッジとトプ画の枠','友達の画面やランキングで、名前の横に PRO バッジ、トプ画に好きな色の枠が出る。'],
   ['🚫','広告なし','ホームや履歴の下の広告が消える。'],
   ['🎨','シェア画像の色を変えられる','ブルー・グリーン・ピンク・ゴールド・ホワイトの5色を追加。'],
   ['📊','詳しい統計','部位別セット数の30日・全期間、月別のセット数のグラフ。'],
@@ -31,6 +33,7 @@ function card(html){var d=document.createElement('div');d.className='day gc';d.i
 
 function paywall(el){el.innerHTML='';
   el.appendChild(card("<h2 style='font-size:22px'>PUMP<span class='pb'>PRO</span></h2>"+(paid?"<p class='fn'>✅ PUMP Pro を使っているよ。ありがとう！</p>":byGrant()?"<p class='fn'>🎁 招待の特典で PUMP Pro が使えるよ（"+untilText()+"まで）。そのあとも続けたい人は、下から購入できるよ。</p>":"<p class='fn'>記録・グラフ・友達機能は、ずっと無料で使えるよ。もっと楽しみたい人向けのプラン。</p>")+featuresHtml()));
+  if(active&&window.WK_CLOUD&&WK_CLOUD.proLookCard)WK_CLOUD.proLookCard(el);
   if(!native){ // ブラウザ版（試用）
     var t=card("<h2>試用版のスイッチ</h2><p class='fn'>ここではお金はかからない。Pro の機能を試すためのスイッチだよ。アプリ版では App Store / Google Play で購入する。</p>");
     var b=document.createElement('button');b.className='hb2';b.textContent=paid?'Pro をオフにする':'Pro をオンにして試す';

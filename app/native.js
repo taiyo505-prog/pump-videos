@@ -42,9 +42,16 @@ att.then(function(){return A.requestConsentInfo()}).then(function(info){if(info.
 document.addEventListener('wk:pro',syncAd);
 new MutationObserver(syncAd).observe(document.body,{subtree:true,attributes:true,attributeFilter:['class']})}
 // 設定画面から「広告の同意を変更」を開けるようにする（EU などで必要）
+// ---- 画像・動画の共有（いったん端末の一時フォルダに書いてから、共有シートを開く） ----
+function shareFile(blob,name,text){var FS=P.Filesystem,SH=P.Share;if(!FS||!SH||!blob)return Promise.resolve(false);
+ return new Promise(function(res,rej){var r=new FileReader();r.onload=function(){res(String(r.result).split(',')[1])};r.onerror=rej;r.readAsDataURL(blob)})
+ .then(function(b64){return FS.writeFile({path:name,data:b64,directory:'CACHE'})})
+ .then(function(w){return SH.share({text:text||'',files:[w.uri]})}).then(function(){return true})
+ .catch(function(e){return !/cancel/i.test(String(e&&e.message||e))?false:true})}
 window.WK_NATIVE={privacyOptions:function(){return A?A.showPrivacyOptionsForm():Promise.resolve()},
 pushRegister:function(save){pushRegister(save)},
-takeInvite:function(){var c=pendingInvite;pendingInvite=null;return c}};
+takeInvite:function(){var c=pendingInvite;pendingInvite=null;return c},
+shareFile:shareFile};
 
 // ---- ストアのレビュー依頼 ----
 // 自己ベストを更新した気分のいい時に出す。5日以上トレーニングした人だけ、120日に1回まで（OS 側でも年3回までに制限される）

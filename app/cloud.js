@@ -20,7 +20,9 @@ var COLORS=['#ff5a1f','#3d8bff','#2fd27a','#ff4fa3','#f5b83d','#a970ff'];
 // トプ画。写真があれば写真、なければ名前の1文字目を色つきの丸で
 var AV={};
 function learn(id,url){if(id&&url)AV[id]=url}
-function avatar(id,name,size){var sz=size?'width:'+size+'px;height:'+size+'px;font-size:'+Math.round(size*.45)+'px':'';
+// PUMP Pro の人（自分と友達）。PROS[ユーザーID] = 枠の色
+var PROS={},PRO_COLORS=['#ff5a1f','#3d8bff','#2fd27a','#ff4fa3','#f5b83d','#b07cff'];
+function avatar(id,name,size){var sz=(size?'width:'+size+'px;height:'+size+'px;font-size:'+Math.round(size*.45)+'px;':'')+(PROS[id]?'box-shadow:0 0 0 2px var(--bg),0 0 0 4px '+PROS[id]+';':'');
 if(AV[id])return "<img class='av' alt='' src='"+esc(AV[id])+"' style='"+sz+"'>";
 var n=0;for(var i=0;i<String(id).length;i++)n=(n*31+String(id).charCodeAt(i))>>>0;return "<span class='av' style='background:"+COLORS[n%COLORS.length]+';'+sz+"'>"+esc((name||'?').charAt(0))+'</span>'}
 function squareJpeg(file,px){return new Promise(function(res,rej){var u=URL.createObjectURL(file),im=new Image();im.onload=function(){URL.revokeObjectURL(u);var s=Math.min(im.naturalWidth,im.naturalHeight),c=document.createElement('canvas');c.width=c.height=px;
@@ -209,22 +211,24 @@ var c=card('全国ランキング');c.appendChild(periodTabs(body));
 var ex=h('div',{class:'tabs nex'});RANK_EX.forEach(function(n){ex.appendChild(btn(n,rankEx===n?'on':'',function(){rankEx=n;nationalTab(body)}))});c.appendChild(ex);
 c.appendChild(h('p',{class:'fn'},'PUMPを使っている全員の自己ベスト（推定1RM）で比べるよ。体重や年齢は考えない、ガチの重さ勝負。'));
 if(me.rank_optout)c.appendChild(h('div',{class:'nme'},'全国ランキングに参加していないよ（下の設定で参加できる）'));
-else if(r.me)c.appendChild(h('div',{class:'nme'},"<span>あなたの順位</span><b>"+r.me.rank.toLocaleString()+'位</b><span>'+r.total.toLocaleString()+'人中・<em>上位'+r.me.top_pct+'%</em></span><span>推定1RM '+Math.round(r.me.e1rm*10)/10+'kg</span>'));
+else if(r.me&&r.me.status==='ok')c.appendChild(h('div',{class:'nme'},"<span>あなたの順位</span><b>"+(r.me.rank?r.me.rank+'位':'上位'+r.me.top_pct+'%')+'</b><span>推定1RM '+Math.round(r.me.e1rm*10)/10+'kg</span>'));
+else if(r.me)c.appendChild(h('div',{class:'nme'},"<span>推定1RM "+Math.round(r.me.e1rm*10)/10+'kg</span><span>'+({new:'始めてから7日たつと、全国ランキングに載るよ。',days:'直近30日で4日以上トレーニングを記録すると、全国ランキングに載るよ。',count:esc(rankEx)+' を3日以上記録すると、全国ランキングに載るよ（あと'+Math.max(1,3-(r.me.days||0))+'日）。',reported:'通報が多かったため、今は表示されていないよ。',optout:'全国ランキングに参加していないよ。'}[r.me.status]||'')+'</span>'));
 else c.appendChild(h('div',{class:'nme'},esc(rankEx)+' を記録すると、ここに全国の順位が出るよ'));
 if(!r.top.length)c.appendChild(h('p',{class:'fn'},'まだ誰も記録してないよ。1位のチャンス！'));
 r.top.forEach(function(x){var medal=['🥇','🥈','🥉'][x.rank-1]||x.rank,id='n'+x.rank+'_'+(x.me?'me':''),av=x.avatar?pub(x.avatar):'';if(x.me)learn(me.id,me.avatar_url);else if(av)learn(id,av);
- c.appendChild(h('div',{class:'rk'+(x.me?' mine':'')},"<span class='rn2'>"+medal+'</span>'+avatar(x.me?me.id:id,x.name)+"<span class='rnm'>"+esc(x.name)+(x.me?'（あなた）':'')+'</span><b>'+Math.round(x.e1rm*10)/10+'kg</b>'))});
-if(r.total>r.top.length)c.appendChild(h('p',{class:'fn'},'上位'+r.top.length+'人まで表示。'));
+ c.appendChild(h('div',{class:'rk'+(x.me?' mine':'')},"<span class='rn2'>"+medal+'</span>'+avatar(x.me?me.id:id,x.name)+"<span class='rnm'>"+esc(x.name)+(x.me?'（あなた）':'')+'</span><b>'+Math.round(x.e1rm*10)/10+'kg</b>'+(x.me?'':"<button type='button' class='rpt2' data-rid='"+esc(x.rid)+"' aria-label='通報'>⚑</button>")))});
+c.addEventListener('click',async function(e){var b=e.target.closest('[data-rid]');if(!b)return;if(!await sheet({title:'この記録を通報する？',body:'ありえない重さなど、おかしいと思う記録だけ通報してね。3人以上に通報されると、全国ランキングに表示されなくなるよ。',ok:'通報する',danger:1}))return;api.reportRank(rankEx,b.getAttribute('data-rid')).then(function(){toast('通報したよ')}).catch(function(){toast('通報できなかった')})});
+c.appendChild(h('p',{class:'fn'},'上位'+r.top.length+'人まで表示。載るのは、始めて7日以上・直近30日で4日以上トレーニングしている人。急に伸びた記録は、何日か続けて確かめてから反映するよ。おかしい記録は ⚑ で通報できる（3人以上で非表示）。'));
 body.appendChild(c);
 var st=card('全国ランキングの設定'),nm=h('label',{class:'fn tg'},"<input type='checkbox'"+(me.rank_name?' checked':'')+'><span>名前とトプ画を出す（オフのときは「匿名のトレーニー」で表示）</span>'),oo=h('label',{class:'fn tg'},"<input type='checkbox'"+(me.rank_optout?' checked':'')+'><span>全国ランキングに参加しない</span>');
 function save(){var o={rank_name:nm.querySelector('input').checked,rank_optout:oo.querySelector('input').checked};api.setRankPrefs(o).then(function(){me.rank_name=o.rank_name;me.rank_optout=o.rank_optout;toast('保存したよ');nationalTab(body)}).catch(function(){toast('保存できなかった')})}
 nm.querySelector('input').addEventListener('change',save);oo.querySelector('input').addEventListener('change',save);st.appendChild(nm);st.appendChild(oo);body.appendChild(st)}
-// 主要6種目の自己ベストを送る（上がったときだけ）
-var BUP='pump-bests-up';
-function syncBests(){if(!user||!api.saveBests||!W.data)return;var key=BUP+'-'+user.id,up={};try{up=JSON.parse(localStorage.getItem(key)||'{}')}catch(e){}var best={};
-W.data.forEach(function(e){if(RANK_EX.indexOf(e.name)<0||e.bw||!(e.w>0)||!(e.reps>=1&&e.reps<=30)||!(e.e1>0))return;if(!best[e.name]||e.e1>best[e.name].e1)best[e.name]=e});
-var rows=Object.keys(best).filter(function(n){return !(up[n]>=best[n].e1-1e-6)}).map(function(n){var e=best[n];return{exercise:n,e1rm:Math.round(e.e1*10)/10,weight:Math.min(e.w,Math.round(e.e1*10)/10),reps:e.reps,at:new Date(e.t).toISOString()}});
-if(!rows.length)return;api.saveBests(rows).then(function(){rows.forEach(function(x){up[x.exercise]=x.e1rm});try{localStorage.setItem(key,JSON.stringify(up))}catch(e){}}).catch(function(){})}
+// 主要6種目の「その日のベスト」を送る（サーバーで自己ベストを決める。変わった日だけ送る）
+var BUP='pump-liftdays-up';
+function syncBests(){if(!user||!api.saveLiftDays||!W.data)return;var key=BUP+'-'+user.id,up={};try{up=JSON.parse(localStorage.getItem(key)||'{}')}catch(e){}var best={};
+W.data.forEach(function(e){if(RANK_EX.indexOf(e.name)<0||e.bw||!(e.w>0)||!(e.reps>=1&&e.reps<=30)||!(e.e1>0))return;var d=new Date(e.t),day=d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2),k=e.name+'|'+day;if(!best[k]||e.e1>best[k].e1)best[k]={e:e,day:day}});
+var rows=Object.keys(best).filter(function(k){return up[k]!==Math.round(best[k].e.e1*10)/10}).map(function(k){var b=best[k],e1=Math.round(b.e.e1*10)/10;return{k:k,exercise:b.e.name,day:b.day,e1rm:e1,weight:Math.min(b.e.w,e1),reps:b.e.reps}});
+if(!rows.length)return;rows=rows.slice(0,500);api.saveLiftDays(rows).then(function(){rows.forEach(function(x){up[x.k]=x.e1rm});try{localStorage.setItem(key,JSON.stringify(up))}catch(e){}}).catch(function(){})}
 async function monthTab(body){var n=new Date(),a=new Date(n.getFullYear(),n.getMonth(),1),b=new Date(n.getFullYear(),n.getMonth()+1,1),pa=new Date(n.getFullYear(),n.getMonth()-1,1);
 var r=await Promise.all([api.monthDays(ymd(pa),ymd(b)),api.friendships()]),rows=r[0],fr=r[1],by={},prev={};Object.keys(fr.avatars||{}).forEach(function(k){learn(k,fr.avatars[k])});
 function add(id,name){if(!by[id])by[id]={id:id,name:name,days:0,sets:0}}
@@ -341,7 +345,10 @@ setAvatar:async function(blob){var old=must(await sb.from('profiles').select('av
 var up=await sb.storage.from('avatars').upload(path,blob,{contentType:'image/jpeg'});if(up.error)throw up.error;must(await sb.from('profiles').update({avatar_path:path}).eq('id',uid));if(old)sb.storage.from('avatars').remove([old]);return pub(path)},
 setName:function(n){return sb.from('profiles').update({display_name:n}).eq('id',uid).then(must)},
 setRankPrefs:function(o){return sb.from('profiles').update(o).eq('id',uid).then(must)},
-saveBests:function(rows){return sb.from('lift_bests').upsert(rows.map(function(x){return{user_id:uid,exercise:x.exercise,e1rm:x.e1rm,weight:x.weight,reps:x.reps,achieved_at:x.at,updated_at:new Date().toISOString()}})).then(must)},
+setProLook:function(o){return sb.from('profiles').update(o).eq('id',uid).then(must)},
+proLooks:function(){return sb.from('profiles').select('id,pro_color').eq('pro_badge',true).then(must)},
+saveLiftDays:function(rows){return sb.from('lift_days').upsert(rows.map(function(x){return{user_id:uid,exercise:x.exercise,day:x.day,e1rm:x.e1rm,weight:x.weight,reps:x.reps}})).then(must)},
+reportRank:function(ex,rid){return sb.rpc('report_rank',{ex:ex,rid:rid}).then(must)},
 nationalRank:function(ex){return sb.rpc('national_rank',{ex:ex,lim:50}).then(must)},
 friendships:async function(){var rows=must(await sb.from('friendships').select('requester,addressee,status,created_at')),ids=rows.map(function(r){return r.requester===uid?r.addressee:r.requester}),names={},avatars={};
 if(ids.length)must(await sb.from('profiles').select('id,display_name,avatar_path').in('id',ids)).forEach(function(p){names[p.id]=p.display_name;avatars[p.id]=pub(p.avatar_path)});return{rows:rows,names:names,avatars:avatars}},
@@ -395,7 +402,7 @@ api.achieve(d.name,d.value,map[key]).then(function(id){if(!id)return;Object.keys
 
 // ---- ログインしたあと: プッシュ通知の登録と、ログイン前に開いた招待リンク ----
 var pushToken=null,INV='pump-invite';
-function afterLogin(){var N=window.WK_NATIVE,n=new Date();liveBeat(true);loadGrant();loadBadges();syncBests();syncDays(new Date(n.getFullYear(),n.getMonth()-1,1).getTime());
+function afterLogin(){var N=window.WK_NATIVE,n=new Date();liveBeat(true);loadGrant();loadBadges();syncBests();setTimeout(syncProBadge,1500);syncDays(new Date(n.getFullYear(),n.getMonth()-1,1).getTime());
 if(N&&N.pushRegister&&api.saveToken)N.pushRegister(function(t,pf){pushToken=t;api.saveToken(t,pf).catch(function(){})});
 var c=null;try{c=localStorage.getItem(INV);localStorage.removeItem(INV)}catch(e){}if(!c&&N&&N.takeInvite)c=N.takeInvite();if(c)invite(c)}
 
@@ -412,8 +419,18 @@ var bu='';if(bd&&bd.pairs&&bd.pairs.length)bu="<div class='ivy'><b>🤝 バデ�
 el.innerHTML=hd+bar+ls+bu}
 // バッジ（自分と友達の分）。BADGES[ユーザーID] = ['founder', ...]
 var BADGES={},BNAME={founder:['🏅','創設メンバー'],recruiter:['📣','勧誘マスター']};
-function loadBadges(){if(!api.badges)return Promise.resolve();return api.badges().then(function(rs){BADGES={};rs.forEach(function(r){(BADGES[r.user_id]=BADGES[r.user_id]||[]).push(r.badge)});window.WK_BADGES=me&&BADGES[me.id]||[];try{document.dispatchEvent(new CustomEvent('wk:badges'))}catch(e){}}).catch(function(){})}
-function badgeHtml(id,full){return (BADGES[id]||[]).map(function(b){var x=BNAME[b];return x?"<span class='bdg "+b+"' title='"+x[1]+"'>"+x[0]+(full?' '+x[1]:'')+'</span>':''}).join('')}
+function loadPros(){if(!api.proLooks)return Promise.resolve();return api.proLooks().then(function(rs){PROS={};rs.forEach(function(r){PROS[r.id]=r.pro_color||PRO_COLORS[0]})}).catch(function(){})}
+// 自分の Pro の状態をプロフィールに書く（友達の画面で PRO バッジが出る）
+function syncProBadge(){if(!user||!me||!api.setProLook||!window.WK_PRO||!WK_PRO.ready)return;var on=!!WK_PRO.active;if(!!me.pro_badge===on)return;api.setProLook({pro_badge:on}).then(function(){me.pro_badge=on;if(on)PROS[me.id]=me.pro_color||PRO_COLORS[0];else delete PROS[me.id]}).catch(function(){})}
+document.addEventListener('wk:pro',syncProBadge);
+// PUMP Pro の画面に出す「PROの見た目」（枠の色を選ぶ）
+function proLookCard(el){if(!user||!me){el.appendChild(card('PROの見た目')).appendChild(h('p',{class:'fn'},'ログインすると、友達の画面で名前の横に PRO バッジとトプ画の枠が出るよ。'));return}
+var c=card('PROの見た目'),pv=h('div',{class:'plk'}),sw=h('div',{class:'pls'});c.appendChild(h('p',{class:'fn'},'友達の画面やランキングで、名前の横に PRO バッジ、トプ画に枠が出るよ。枠の色を選んでね。'));
+function paint(){var col=me.pro_color||PRO_COLORS[0];PROS[me.id]=col;pv.innerHTML=avatar(me.id,me.display_name,56)+'<b>'+esc(me.display_name)+'</b>'+badgeHtml(me.id);sw.innerHTML=PRO_COLORS.map(function(x){return "<button type='button' data-c='"+x+"' class='"+(x===col?'on':'')+"' style='background:"+x+"' aria-label='枠の色'></button>"}).join('')}
+sw.addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;var col=b.getAttribute('data-c');api.setProLook({pro_color:col,pro_badge:true}).then(function(){me.pro_color=col;me.pro_badge=true;paint();toast('枠の色を変えたよ')}).catch(function(){toast('変えられなかった')})});
+learn(me.id,me.avatar_url);paint();c.appendChild(pv);c.appendChild(sw);el.appendChild(c)}
+function loadBadges(){if(!api.badges)return Promise.resolve();loadPros();return api.badges().then(function(rs){BADGES={};rs.forEach(function(r){(BADGES[r.user_id]=BADGES[r.user_id]||[]).push(r.badge)});window.WK_BADGES=me&&BADGES[me.id]||[];try{document.dispatchEvent(new CustomEvent('wk:badges'))}catch(e){}}).catch(function(){})}
+function badgeHtml(id,full){return (PROS[id]?"<span class='bdg pro' style='background:"+PROS[id]+"'>PRO</span>":'')+(BADGES[id]||[]).map(function(b){var x=BNAME[b];return x?"<span class='bdg "+b+"' title='"+x[1]+"'>"+x[0]+(full?' '+x[1]:'')+'</span>':''}).join('')}
 // トレーニングが終わったら、バディ特典を確かめる
 function buddyCheck(){if(!user||!api.checkBuddy)return;api.checkBuddy().then(function(r){if(r&&r.rewarded&&r.rewarded.length){loadGrant();sheet({title:'🤝 バディ特典 PUMP Pro +7日！',body:r.rewarded.join('・')+' さんと2人で、1週間に3日トレーニング達成。2人とも7日分もらえたよ。',ok:'やった',cancel:false})}}).catch(function(){})}
 function loadGrant(){if(!api.proGrant||!window.WK_PRO||!WK_PRO.grant)return;api.proGrant().then(function(u){WK_PRO.grant(u)}).catch(function(){})}
@@ -449,6 +466,6 @@ api.logError({message:key,stack:String(stack||'').slice(0,2000),page:pg?pg.id:'c
 window.addEventListener('error',function(e){reportError(e.message,e.error&&e.error.stack)});
 window.addEventListener('unhandledrejection',function(e){var r=e.reason||{};reportError(r.message||String(r),r.stack)});
 
-window.WK_CLOUD={enabled:true,demo:demo,loggedIn:function(){return !!user},friends:friends,account:account,backupNow:backupNow,refresh:refresh,invite:invite,
+window.WK_CLOUD={enabled:true,demo:demo,proLookCard:proLookCard,loggedIn:function(){return !!user},friends:friends,account:account,backupNow:backupNow,refresh:refresh,invite:invite,
 open:function(t){friends($('fl'),t)}};
 })();
