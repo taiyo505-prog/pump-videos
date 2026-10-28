@@ -164,8 +164,17 @@ ph.appendChild(h('span',{class:'burst'},'♥'));c.appendChild(ph);
 var acts=h('div',{class:'pact'}),lb=btn('','pl2',function(){toggleLike()}),cb=btn('','pl2',function(){openComments(true)});
 function paint(){lb.innerHTML=(liked?"<b class='lk'>♥</b>":'♡')+' '+nl;lb.classList.toggle('on',liked);cb.innerHTML='💬 '+nc}
 async function toggleLike(force){if(force&&liked)return;liked=!liked;nl+=liked?1:-1;paint();if(liked){lb.classList.remove('pop');void lb.offsetWidth;lb.classList.add('pop')}try{await api.like(p.id,liked)}catch(e){liked=!liked;nl+=liked?1:-1;paint()}}
+// 長押し: 写真だけやなく、メニューを重ねた画像（シェア画像と同じ）を保存する。アプリ版は写真アプリに直接、ブラウザは保存・共有の画面
+var lpT=null,lpDone=false,lx=0,ly=0;
+ph.addEventListener('touchstart',function(e){var t=e.touches[0];lx=t.clientX;ly=t.clientY;lpDone=false;clearTimeout(lpT);lpT=setTimeout(function(){lpT=null;lpDone=true;longSave()},550)},{passive:true});
+ph.addEventListener('touchmove',function(e){var t=e.touches[0];if(lpT&&Math.abs(t.clientX-lx)+Math.abs(t.clientY-ly)>12){clearTimeout(lpT);lpT=null}},{passive:true});
+['touchend','touchcancel'].forEach(function(n){ph.addEventListener(n,function(){clearTimeout(lpT);lpT=null},{passive:true})});
+ph.addEventListener('contextmenu',function(e){e.preventDefault()});
+async function longSave(){var N=window.WK_NATIVE;if(!(N&&N.saveMedia)){savePost(p);return}
+ try{var im=p.photo?await loadImg(p.photo):null,cv;if(p.card&&im){cv=document.createElement('canvas');cv.width=im.naturalWidth;cv.height=im.naturalHeight;cv.getContext('2d').drawImage(im,0,0)}else cv=postImage(p,im);
+  cv.toBlob(function(b){N.saveMedia(b).then(function(r){toast(r&&r.ok?'写真に保存したよ ✅':r&&r.denied?'写真への保存が許可されてないよ。設定アプリ →「PUMP」→「写真」で許可してね。':'保存できなかった。もう一度ためしてね')})},'image/png')}catch(e){savePost(p)}}
 // 1回タップ: メニューの表示/非表示、2回タップ: いいね
-var lastTap=0,tapT=null;ph.addEventListener('click',function(){var n=Date.now();if(n-lastTap<350){clearTimeout(tapT);tapT=null;var b=ph.querySelector('.burst');b.classList.remove('go');void b.offsetWidth;b.classList.add('go');toggleLike(true);lastTap=0;return}
+var lastTap=0,tapT=null;ph.addEventListener('click',function(){if(lpDone){lpDone=false;return}var n=Date.now();if(n-lastTap<350){clearTimeout(tapT);tapT=null;var b=ph.querySelector('.burst');b.classList.remove('go');void b.offsetWidth;b.classList.add('go');toggleLike(true);lastTap=0;return}
 lastTap=n;tapT=setTimeout(function(){var o=ph.querySelector('.pov');if(o)o.classList.toggle('off')},360)});
 paint();acts.appendChild(lb);acts.appendChild(cb);acts.appendChild(h('span',{class:'pst'},esc(p.title)+(p.duration_ms?' · ⏱'+W.hms(p.duration_ms):'')+' · '+p.sets+'セット'));acts.appendChild(btn('⤓ 保存・共有','pl2 psv',function(){savePost(p)}));c.appendChild(acts);
 var ex=h('details',{class:'pex'},"<summary>"+esc(p.title_ja||p.title)+'のメニュー（'+p.sets+'セット）</summary>'+(p.exercises||[]).map(function(x){return "<div class='ex'><div class='en'>"+esc(x.name)+(x.db?' <i>片手</i>':'')+"</div><div class='sets'>"+(x.sets||[]).map(function(s){return '<span>'+esc(s)+'</span>'}).join('')+'</div></div>'}).join(''));c.appendChild(ex);
