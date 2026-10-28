@@ -260,6 +260,8 @@ header{padding:14px 72px 12px 18px;background:#000;border-bottom:1px solid var(-
 .sr{display:flex;gap:10px}
 .sr button,#shc{flex:1;border:0;border-radius:12px;padding:14px;font-weight:700;font-size:16px;background:var(--acc);color:var(--accink)}
 #shc{width:100%;margin-top:10px;background:#2b2f3a;color:#fff}
+.sr2{margin-top:10px}.sr2 button{background:#1b1d24;color:#fff;border:1px solid #33363f;padding:11px;font-size:14px}#shx{background:#fff;color:#000}
+.shh{font-size:12px;color:#8a8a94;margin:6px 0 2px}html.native #shi,html.native #shv,html.native .bci{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 
 /* メニュー */
 #mb{position:fixed;top:calc(env(safe-area-inset-top,0px) + 12px);right:max(12px,calc((100vw - 640px) / 2 + 12px));z-index:6;width:44px;height:44px;border-radius:22px;border:1px solid var(--line);background:rgba(22,22,24,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:0}
@@ -357,7 +359,7 @@ img.av{object-fit:cover;background:#222}
 .bpr{font-size:14px;line-height:1.6;margin-top:6px}.bpr b{color:var(--acc)}
 .bph{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:10px 0}.bpi{position:relative;border-radius:10px;overflow:hidden;border:2px solid transparent;aspect-ratio:3/4;background:var(--bot)}.bpi.on{border-color:var(--acc)}.bpi img{width:100%;height:100%;object-fit:cover;display:block}
 .bpi span{position:absolute;left:0;right:0;bottom:0;font-size:11px;font-weight:700;padding:3px 6px;background:linear-gradient(transparent,rgba(0,0,0,.75));color:#fff}.bdl{position:absolute;top:4px;right:4px;width:24px;height:24px;border-radius:50%;border:0;background:rgba(0,0,0,.6);color:#fff;font-size:12px;line-height:24px;padding:0}
-.bci{width:100%;border-radius:12px;display:block;margin:8px 0}
+.bci{display:block;max-width:100%;max-height:70vh;margin:8px auto;border-radius:12px}
 .btab{margin:12px 14px 0}.bad{width:100%;margin:10px 0 4px}.bnone{border:2px dashed var(--line);border-radius:14px;padding:22px 16px;text-align:center;display:flex;flex-direction:column;gap:6px}.bnone b{font-family:var(--F);font-style:italic;font-size:28px;color:var(--acc)}.bnone span{font-size:13px;color:var(--sub)}
 .bask{position:absolute;inset:0;background:rgba(0,0,0,.82);display:none;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:6px;text-align:center}.bask b{font-size:13px;color:#fff;margin-bottom:2px}.bask .hb2{padding:6px 8px;font-size:13px;width:90%;margin:0;min-height:0}.bpi.ask .bask{display:flex}.bpi.ask .bdl{display:none}
 .tabs.nex{overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none}.tabs.nex::-webkit-scrollbar{display:none}.tabs.nex button{flex:none}
@@ -445,7 +447,7 @@ img.av{object-fit:cover;background:#222}
 <div id="bi" class="fn"></div>
 <div id="err"></div><button id="go">はじめる</button><button id="fx" hidden>閉じる</button><button id="clear" hidden>全削除</button></div></div>
 
-<div id="sv"><div id="sc"><img id="shi" alt="シェア用画像"><video id="shv" playsinline controls loop hidden></video><div id="shm"></div><div id="thm" class="thm"></div><div class="sr"><button id="shig">Instagram・共有</button><button id="shx">Xに投稿</button></div><button id="shc">閉じる</button></div></div>
+<div id="sv"><div id="sc"><img id="shi" alt="シェア用画像"><video id="shv" playsinline controls loop hidden></video><div id="shm"></div><div id="thm" class="thm"></div><div class="shh">長押しで写真に保存できるよ</div><div class="sr"><button id="shig">📷 ストーリー</button><button id="shx">𝕏 に投稿</button></div><div class="sr sr2"><button id="shsv">保存</button><button id="shot">その他で共有</button></div><button id="shc">閉じる</button></div></div>
 
 <button id="mb" aria-label="メニュー" aria-controls="dr" aria-expanded="false"><span></span><span></span><span></span></button>
 <div id="dr"><div id="drb"></div><nav id="drp" aria-label="メニュー"><div id="dh"></div>
@@ -967,25 +969,31 @@ function compare(l){var c=$('bcmp');if(!c)return;var p=l.filter(function(x){retu
  return Promise.all([a,b].map(function(x){return new Promise(function(res){var im=new Image();im.onload=function(){res(im)};im.onerror=function(){res(null)};im.src=phSrc(x)})})).then(function(ims){if(!ims[0]||!ims[1]){c.innerHTML="<p class='fn'>写真を読み込めなかった。✕で消して、もう一度追加してね。</p>";return}
  var cv=drawBA(a,b,ims),days=Math.round((b.t-a.t)/864e5);
  c.innerHTML="<img class='bci' alt='ビフォーアフター' src='"+cv.toDataURL('image/jpeg',.92)+"'><button class='hb2' id='bsh'>この画像を保存・シェア</button>";$('bsh').addEventListener('click',function(){showImage(cv,days+'日間の変化💪 #筋トレ #ビフォーアフター #PUMPアプリ')})})}
-// 保存・シェア用のビフォーアフター画像（1080×1350）
-function drawBA(a,b,ims){var W=1080,H=1350,cv=document.createElement('canvas');cv.width=W;cv.height=H;var g=cv.getContext('2d'),O=getComputedStyle(document.documentElement).getPropertyValue('--acc').trim()||'#ff5a1f',F="'Barlow Condensed','Hiragino Sans',sans-serif",J="'Zen Kaku Gothic New','Hiragino Sans',sans-serif";
- function rr(x,y,w,h,r){g.beginPath();g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath()}
- g.fillStyle='#0a0a0c';g.fillRect(0,0,W,H);var gl=g.createRadialGradient(W*.85,0,0,W*.85,0,900);gl.addColorStop(0,'rgba(255,90,31,.35)');gl.addColorStop(1,'rgba(255,90,31,0)');g.fillStyle=gl;g.fillRect(0,0,W,H);
- g.save();g.globalAlpha=.06;g.strokeStyle=O;g.lineWidth=18;for(var k=-H;k<W;k+=70){g.beginPath();g.moveTo(k,H);g.lineTo(k+H,0);g.stroke()}g.restore();
- var days=Math.round((b.t-a.t)/864e5),A=bodyAt(a.t),B=bodyAt(b.t);
- g.fillStyle=O;g.font='italic 800 84px '+F;g.fillText('PUMP',56,120);g.fillStyle='#fff';g.font='700 28px '+F;g.fillText('T R A N S F O R M A T I O N',60,160);
- g.textAlign='right';g.fillStyle='#fff';g.font='italic 800 120px '+F;g.fillText(days>0?String(days):'DAY 1',W-56,128);if(days>0){g.fillStyle=O;g.font='italic 800 44px '+F;g.fillText('DAYS',W-56,170)}g.textAlign='left';
- var top=200,ph=860,pw=(W-112-20)/2;
- [a,b].forEach(function(x,i){var im=ims[i],px=56+i*(pw+20),k2=Math.max(pw/im.naturalWidth,ph/im.naturalHeight),sw=pw/k2,sh=ph/k2;g.save();rr(px,top,pw,ph,30);g.clip();g.drawImage(im,(im.naturalWidth-sw)/2,(im.naturalHeight-sh)/2,sw,sh,px,top,pw,ph);
-  var sh2=g.createLinearGradient(0,top+ph-260,0,top+ph);sh2.addColorStop(0,'rgba(0,0,0,0)');sh2.addColorStop(1,'rgba(0,0,0,.85)');g.fillStyle=sh2;g.fillRect(px,top+ph-260,pw,260);g.restore();
-  if(i){g.save();rr(px,top,pw,ph,30);g.lineWidth=6;g.strokeStyle=O;g.stroke();g.restore()}
-  var lab=i?'AFTER':'BEFORE';g.font='italic 800 42px '+F;var lw=g.measureText(lab).width+40;g.fillStyle=i?O:'#fff';rr(px+22,top+22,lw,62,31);g.fill();g.fillStyle=i?'#fff':'#0a0a0c';g.fillText(lab,px+42,top+68);
-  var bd=i?B:A;g.fillStyle='#d6d6dc';g.font='700 32px '+J;g.fillText(md(x.t),px+26,top+ph-(bd?118:34));if(bd){g.fillStyle='#fff';g.font='italic 800 84px '+F;g.fillText(r1(bd.w)+'kg',px+24,top+ph-34);if(bd.bf){var ww=g.measureText(r1(bd.w)+'kg').width;g.fillStyle='#b9b9c3';g.font='italic 800 40px '+F;g.fillText(r1(bd.bf)+'%',px+40+ww,top+ph-38)}}});
- g.fillStyle=O;g.beginPath();g.arc(W/2,top+ph/2,40,0,Math.PI*2);g.fill();g.strokeStyle='#fff';g.lineWidth=7;g.lineCap='round';g.beginPath();g.moveTo(W/2-14,top+ph/2);g.lineTo(W/2+12,top+ph/2);g.moveTo(W/2+2,top+ph/2-12);g.lineTo(W/2+14,top+ph/2);g.lineTo(W/2+2,top+ph/2+12);g.stroke();
- var by=top+ph+40;g.fillStyle='#17171b';rr(56,by,W-112,H-by-50,28);g.fill();var st=[];
- if(A&&B){var dw=Math.round((B.w-A.w)*10)/10;st.push(['体重',(dw>0?'+':dw<0?'−':'±')+Math.abs(dw)+'kg'])}if(A&&B&&A.bf&&B.bf){var df=Math.round((B.bf-A.bf)*10)/10;st.push(['体脂肪',(df>0?'+':df<0?'−':'±')+Math.abs(df)+'%'])}st.push(['期間',days+'日']);
- var cw=(W-112)/st.length;st.forEach(function(v,i){var cx=56+cw*i+cw/2;g.textAlign='center';g.fillStyle='#9a9aa2';g.font='700 30px '+J;g.fillText(v[0],cx,by+58);g.fillStyle=i===0&&st.length>1?O:'#fff';g.font='italic 800 92px '+F;g.fillText(v[1],cx,by+150)});
- g.textAlign='right';g.fillStyle='#6b6b75';g.font='700 26px '+J;g.fillText('筋トレのSNS PUMP',W-56,H-14);g.textAlign='left';return cv}
+// 保存・シェア用のビフォーアフター画像（1080×1920。ストーリーにそのまま載る縦長）
+// 写真を画面いっぱいに並べて、下に大きい数字を重ねる（ランニングアプリの記録画像みたいな見せ方）
+function drawBA(a,b,ims){var W=1080,H=1920,cv=document.createElement('canvas');cv.width=W;cv.height=H;var g=cv.getContext('2d'),O=getComputedStyle(document.documentElement).getPropertyValue('--acc').trim()||'#ff5a1f',F="'Barlow Condensed','Hiragino Sans',sans-serif";
+ var days=Math.max(0,Math.round((b.t-a.t)/864e5)),A=bodyAt(a.t),B=bodyAt(b.t),PH=1520,wd={};data.forEach(function(e){if(e.t>=a.t-432e5&&e.t<=b.t+432e5)wd[dkey(e.t)]=1});var nw=Object.keys(wd).length;
+ function ymd(t){var d=new Date(t);return d.getFullYear()+'.'+(d.getMonth()+1)+'.'+d.getDate()}
+ function sg(v,u){v=Math.round(v*10)/10;return (v>0?'+':v<0?'−':'±')+Math.abs(v)+u}
+ function txt(t,x,y,font,col,al){g.font=font;g.fillStyle=col;g.textAlign=al||'center';g.fillText(t,x,y)}
+ g.fillStyle='#000';g.fillRect(0,0,W,H);
+ // 写真（左右いっぱい）
+ [0,1].forEach(function(i){var im=ims[i],px=i*W/2,pw=W/2,k=Math.max(pw/im.naturalWidth,PH/im.naturalHeight),sw=pw/k,sh=PH/k;g.drawImage(im,(im.naturalWidth-sw)/2,(im.naturalHeight-sh)/2,sw,sh,px,0,pw,PH)});
+ g.fillStyle='#000';g.fillRect(W/2-3,0,6,PH);
+ var gt=g.createLinearGradient(0,0,0,340);gt.addColorStop(0,'rgba(0,0,0,.7)');gt.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=gt;g.fillRect(0,0,W,340);
+ var gb=g.createLinearGradient(0,PH-700,0,PH);gb.addColorStop(0,'rgba(0,0,0,0)');gb.addColorStop(.75,'rgba(0,0,0,.85)');gb.addColorStop(1,'#000');g.fillStyle=gb;g.fillRect(0,PH-700,W,700);
+ g.shadowColor='rgba(0,0,0,.55)';g.shadowBlur=18;
+ // 上: BEFORE / AFTER と日付
+ [[a,'BEFORE','#fff'],[b,'AFTER',O]].forEach(function(v,i){var x=i?W-56:56,al=i?'right':'left';txt(v[1],x,120,'italic 800 76px '+F,v[2],al);txt(ymd(v[0].t),x,170,'600 36px '+F,'rgba(255,255,255,.85)',al)});
+ // 下: 数字（いちばん大きいのは体重の変化。体重がないときは期間）
+ var y=PH-330;
+ if(A&&B){txt('Weight',W/2,y,'500 40px '+F,'rgba(255,255,255,.8)');txt(sg(B.w-A.w,' kg'),W/2,y+165,'800 190px '+F,'#fff');txt(r1(A.w)+' kg  →  '+r1(B.w)+' kg',W/2,y+230,'600 40px '+F,'rgba(255,255,255,.75)')}
+ else{txt('Days',W/2,y,'500 40px '+F,'rgba(255,255,255,.8)');txt(String(days),W/2,y+165,'800 190px '+F,'#fff')}
+ g.shadowBlur=0;
+ var st=[];if(A&&B&&A.bf&&B.bf)st.push(['Body Fat',sg(B.bf-A.bf,'%')]);if(nw)st.push(['Workouts',String(nw)]);if(A&&B)st.push(['Days',String(days)]);
+ var cw=(W-112)/st.length,sy=PH+70;st.forEach(function(v,i){var cx=56+cw*i+cw/2;txt(v[0],cx,sy,'500 38px '+F,'rgba(255,255,255,.7)');txt(v[1],cx,sy+120,'800 120px '+F,'#fff');if(i){g.fillStyle='rgba(255,255,255,.18)';g.fillRect(56+cw*i-1,sy-30,2,150)}});
+ // 一番下: ロゴ
+ txt('PUMP',W/2,H-70,'italic 800 84px '+F,O);g.textAlign='left';return cv}
 function recapCard(){return "<div class='day gc'><h2>📅 月間まとめ</h2><div class='fn'>その月のトレーニングを、ストーリーズにそのまま載せられる縦長の画像や、BGMつきの動画にするよ。</div><div class='mrb'><button class='hb2' data-mr='0'>今月のまとめ</button><button class='hb2 sec' data-mr='1'>先月のまとめ</button></div><div class='mrb'><button class='hb2' data-mv='0'>🎬 今月の動画</button><button class='hb2 sec' data-mv='1'>🎬 先月の動画</button></div><div class='fn' id='mrm'></div></div>"}
 
 function showStats(){var days={};data.forEach(function(e){days[dkey(e.t)]=1});
@@ -1085,8 +1093,29 @@ function showImage(cv,text){shBlob=null;shExt='png';cv.toBlob(function(bl){shBlo
 function showVideo(blob,ext,text){shBlob=blob;shExt=ext;shText=text;var v=$('shv');$('shi').hidden=true;v.hidden=false;v.src=URL.createObjectURL(blob);v.play().catch(function(){});$('shm').textContent='';$('thm').innerHTML='';$('sv').className='on'}
 function shareFile(){if(shBlob&&window.WK_NATIVE&&WK_NATIVE.shareFile){WK_NATIVE.shareFile(shBlob,'pump-'+Date.now()+'.'+shExt,shText).then(function(ok){if(!ok)$('shm').textContent='共有できなかった。もう一度試してね。'});return true}
 if(!shBlob||!navigator.canShare)return false;var f=new File([shBlob],'workout.'+shExt,{type:shBlob.type||'image/png'});if(!navigator.canShare({files:[f]}))return false;navigator.share({files:[f],text:shText}).catch(function(){});return true}
-$('shig').addEventListener('click',function(){if(!shareFile())$('shm').textContent=shExt==='png'?'画像を長押しして保存→インスタで選んでね。':'この端末では共有できなかった。アプリ版なら保存・共有できるよ。'});
-$('shx').addEventListener('click',function(){if(shareFile())return;var m=$('shm'),u='https://twitter.com/intent/tweet?text='+encodeURIComponent(shText),w=null;try{w=window.open(u,'_blank')}catch(e){}m.textContent=w?'画像は長押しで保存して、投稿に添付してね。':'開けなかった。画像を長押しで保存して、Xアプリから投稿してね。'});
+function shMsg(t){$('shm').textContent=t}
+function shOther(){if(!shareFile())shMsg(shExt==='png'?'画像を長押しして保存してから、アプリで選んでね。':'この端末では共有できなかった。アプリ版なら保存・共有できるよ。')}
+// インスタ: アプリ版はストーリーの作成画面に直接。ブラウザは共有メニュー（Instagram →「ストーリーズ」）
+$('shig').addEventListener('click',function(){var N=window.WK_NATIVE;if(N&&N.igStory&&shBlob){N.igStory(shBlob).then(function(ok){if(!ok)shOther()});return}
+ if(!shareFile())shMsg('画像を長押しして保存→インスタのストーリーで選んでね。');else shMsg('出てきたメニューで Instagram →「ストーリーズ」をえらんでね。')});
+// X: X は他のアプリから画像を直接わたせないので、画像をコピーしてから投稿画面を開く（投稿画面で長押し→ペースト）
+$('shx').addEventListener('click',function(){var N=window.WK_NATIVE;if(shExt!=='png'){shOther();return}
+ if(N&&N.xPost){N.xPost(shBlob,shText).then(function(r){if(!r){shOther();return}shMsg('画像はコピー済み。投稿画面の文字を入れるところを長押し→「ペースト」で画像がつくよ。')});return}
+ var cp=false;try{if(shBlob&&window.ClipboardItem&&navigator.clipboard&&navigator.clipboard.write){navigator.clipboard.write([new ClipboardItem({'image/png':shBlob})]).catch(function(){});cp=true}}catch(e){}
+ var w=null;try{w=window.open('https://x.com/intent/post?text='+encodeURIComponent(shText),'_blank')}catch(e){}
+ shMsg(!w?'開けなかった。画像を長押しで保存して、Xアプリから投稿してね。':cp?'画像はコピー済み。投稿画面でペーストしてね（うまくいかんときは画像を長押しで保存して添付）。':'画像は長押しで保存して、投稿に添付してね。')});
+$('shot').addEventListener('click',shOther);
+// 保存: アプリ版は写真アプリに直接。ブラウザはダウンロード
+function svToast(t){var d=document.createElement('div');d.className='toast';d.textContent=t;document.body.appendChild(d);setTimeout(function(){d.classList.add('on')},10);setTimeout(function(){d.classList.remove('on');setTimeout(function(){d.remove()},300)},2400)}
+function saveBlob(bl,ext){var N=window.WK_NATIVE;if(!bl)return;var toast=svToast;if(N&&N.saveMedia){N.saveMedia(bl).then(function(r){toast(r&&r.ok?'写真に保存したよ ✅':r&&r.denied?'写真への保存が許可されてないよ。設定アプリ →「PUMP」→「写真」で許可してね。':'保存できなかった。もう一度試してね。')});return}
+ var a=document.createElement('a'),u=URL.createObjectURL(bl);a.href=u;a.download='pump-'+Date.now()+'.'+(ext||'png');document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(u)},4000);toast('保存したよ。')}
+$('shsv').addEventListener('click',function(){saveBlob(shBlob,shExt)});
+// 長押しで保存（アプリ版。ブラウザはもともと長押しで保存できる）
+(function(){var tm=null,x0=0,y0=0;function el(t){return t&&t.closest&&t.closest('#shi,#shv,.bci')}
+ document.addEventListener('touchstart',function(e){var t=el(e.target);if(!t||!document.documentElement.classList.contains('native'))return;var p=e.touches[0];x0=p.clientX;y0=p.clientY;clearTimeout(tm);
+  tm=setTimeout(function(){tm=null;try{navigator.vibrate&&navigator.vibrate(15)}catch(e){}if(t.id==='shi'||t.id==='shv')saveBlob(shBlob,shExt);else fetch(t.src).then(function(r){return r.blob()}).then(function(b){saveBlob(b,'jpg')}).catch(function(){})},550)},{passive:true});
+ document.addEventListener('touchmove',function(e){if(tm){var p=e.touches[0];if(Math.abs(p.clientX-x0)+Math.abs(p.clientY-y0)>12){clearTimeout(tm);tm=null}}},{passive:true});
+ ['touchend','touchcancel'].forEach(function(n){document.addEventListener(n,function(){clearTimeout(tm);tm=null},{passive:true})})})();
 
 // ---- 写真 ----
 function takePhoto(es,id){camFor={es:es,id:id};var c=$('cam');c.value='';c.click()}

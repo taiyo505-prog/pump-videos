@@ -18,6 +18,7 @@ window.WK_CONFIG={
     "iosKey": "",
     "androidKey": ""
   },
+  "instagramAppId": "",
   "legal": {
     "privacyUrl": "https://taiyo505-prog.github.io/pump-videos/app/legal/privacy.html",
     "termsUrl": "https://taiyo505-prog.github.io/pump-videos/app/legal/terms.html"

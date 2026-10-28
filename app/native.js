@@ -48,10 +48,19 @@ function shareFile(blob,name,text){var FS=P.Filesystem,SH=P.Share;if(!FS||!SH||!
  .then(function(b64){return FS.writeFile({path:name,data:b64,directory:'CACHE'})})
  .then(function(w){return SH.share({text:text||'',files:[w.uri]})}).then(function(){return true})
  .catch(function(e){return !/cancel/i.test(String(e&&e.message||e))?false:true})}
+// ---- インスタのストーリー・Xの投稿画面に直接とばす、写真アプリに保存（ios/App/App/PumpShare.swift） ----
+function b64(blob){return new Promise(function(res,rej){var r=new FileReader();r.onload=function(){res(String(r.result).split(',')[1])};r.onerror=rej;r.readAsDataURL(blob)})}
+function isVid(blob){return /^video/.test(blob&&blob.type||'')}
+function igStory(blob){var PS=P.PumpShare;if(!PS||!blob||!cfg.instagramAppId)return Promise.resolve(false);
+ return b64(blob).then(function(d){return PS.instagramStory({data:d,video:isVid(blob),appId:cfg.instagramAppId})}).then(function(r){return !!(r&&r.ok)}).catch(function(){return false})}
+function xPost(blob,text){var PS=P.PumpShare;if(!PS)return Promise.resolve(null);
+ return (blob&&!isVid(blob)?b64(blob):Promise.resolve('')).then(function(d){return PS.xPost({data:d||undefined,text:text||''})}).catch(function(){return null})}
+function saveMedia(blob){var PS=P.PumpShare;if(!PS||!blob)return Promise.resolve(null);
+ return b64(blob).then(function(d){return PS.saveMedia({data:d,video:isVid(blob)})}).catch(function(){return null})}
 window.WK_NATIVE={privacyOptions:function(){return A?A.showPrivacyOptionsForm():Promise.resolve()},
 pushRegister:function(save){pushRegister(save)},
 takeInvite:function(){var c=pendingInvite;pendingInvite=null;return c},
-shareFile:shareFile};
+shareFile:shareFile,igStory:igStory,xPost:xPost,saveMedia:saveMedia};
 
 // ---- ストアのレビュー依頼 ----
 // 自己ベストを更新した気分のいい時に出す。5日以上トレーニングした人だけ、120日に1回まで（OS 側でも年3回までに制限される）
