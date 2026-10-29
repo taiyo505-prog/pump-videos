@@ -558,7 +558,8 @@ function sStart(){if(ses)return;ses={t0:Date.now(),last:Date.now(),laps:[]};sSav
 // ラップ: 「セット終わり」を押すたびに、前に押してから（最初はスタートから）の時間を記録する
 function sLap(){if(!ses)return;var n=Date.now();ses.laps.push(n-ses.last);ses.last=n;sSave();sUI()}
 function sStop(){if(!ses)return 0;lastCid=ses.t0;var d=Date.now()-ses.t0;sesAll.push({t0:ses.t0,dur:d,laps:ses.laps});ses=null;try{localStorage.removeItem(K.ses)}catch(e){}sSave();sUI();emit('wk:end');return d}
-function sDur(es){var d0=dkey(es[0].t),sum=0;sesAll.forEach(function(x){if(dkey(x.t0)===d0)sum+=x.dur});return sum}
+// その記録が入っているトレーニング（スタート〜終わり）の時間だけ足す。1回分の記録なら1回分、1日分なら1日分の時間になる
+function sDur(es){var sum=0;sesAll.forEach(function(x){var a=x.t0-60000,b=x.t0+x.dur;if(es.some(function(e){return e.t>=a&&e.t<=b}))sum+=x.dur});return sum}
 $('br').addEventListener('click',function(){$('brs').hidden=true;sLap();restNow();setDone=true});
 // 時間のところをタップで大きく・小さく（次に開いたときも同じ大きさ）
 function tmBig(on){tmEl.classList.toggle('big',on);try{localStorage.setItem('pump-tm-big',on?'1':'')}catch(e){}log.scrollTop=log.scrollHeight}
