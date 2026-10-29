@@ -721,7 +721,10 @@ if(!(np.h>=100&&np.h<=250)||!(np.w>=25&&np.w<=300)){add('読み取れなかっ�
 var first=!profile,prevW=profile?profile.w:null;profile=np;save();logBody(np.h,np.w);profUI();
 add(first?'登録したよ。身長'+np.h+'cm・体重'+np.w+'kg。':'更新したよ。身長'+np.h+'cm・体重'+np.w+'kg。'+(prevW&&prevW!==np.w?'（前回から'+(np.w>prevW?'+':'')+r1(np.w-prevW)+'kg）':''),'bot')}
 function undo(){var e=data.pop();if(!e){add('取り消せる記録がないよ。','bot');return}save();updateBest();qkUI();add('取り消した: '+e.name+' '+r1(e.w)+'kg × '+e.reps+'回','bot')}
-function cmp(p,e1,n){var s=n>1?'\n'+n+'セット分を記録したよ。':'',tk=dkey(Date.now()),pk=null,pe=null,i,q;for(i=data.length-1;i>=0;i--){q=data[i];if(q.name===p.name&&dkey(q.t)!==tk){if(pk===null)pk=dkey(q.t);if(dkey(q.t)!==pk)break;if(!pe||q.e1>pe.e1)pe=q}}if(pe){var df=e1-pe.e1;s+='\n前回（'+md(pe.t)+'）: '+r1(pe.w)+'kg × '+pe.reps+'回 → 推定1RMは '+(df>=0?'+':'')+r1(df)+'kg'}return s}
+// 前回との比較: 今のトレーニング（0時をまたいでも同じ1回）より前の、いちばん新しいトレーニング（記録が古くてトレーニング時間がないときはその日）と比べる
+function cmp(p,e1,n){var s=n>1?'\n'+n+'セット分を記録したよ。':'',c0=ses?ses.t0-60000:dayStart(Date.now()),ref=null,pe=null,i,q,a,b;for(i=data.length-1;i>=0;i--){q=data[i];if(q.name===p.name&&q.t<c0){ref=q;break}}
+if(ref){var x=sesAll.filter(function(x){return ref.t>=x.t0-60000&&ref.t<=x.t0+x.dur}).pop();if(x){a=x.t0-60000;b=x.t0+x.dur}else{a=dayStart(ref.t);b=a+D-1}
+data.forEach(function(q){if(q.name===p.name&&q.t>=a&&q.t<=b&&(!pe||q.e1>pe.e1))pe=q})}if(pe){var df=e1-pe.e1;s+='\n前回（'+md(pe.t)+'）: '+r1(pe.w)+'kg × '+pe.reps+'回 → 推定1RMは '+(df>=0?'+':'')+r1(df)+'kg'}return s}
 
 function nd(raw){return !/\d/.test(norm(raw))}
 // 知らない種目のとき: 近い候補を出す（タップで入力欄に入る）
@@ -847,7 +850,7 @@ function prText(){var l=prList().slice(0,10);if(!l.length)return 'まだ記録�
 function afterWorkout(td){var t0=td.length?Math.min.apply(null,td.map(function(e){return e.t})):dayStart(Date.now()),title=titleOf(td),out=[];
 var prev=null,ks={};data.forEach(function(e){if(e.t<t0)(ks[dkey(e.t)]=ks[dkey(e.t)]||[]).push(e)});Object.keys(ks).forEach(function(k){var es=ks[k];if(titleOf(es)===title&&(!prev||es[0].t>prev[0].t))prev=es});
 if(prev){var df=td.length-prev.length;out.push('前回の'+title+'（'+md(prev[0].t)+'）より '+(df>=0?'+':'')+df+'セット。'+(df>=0?'着実に積み上げてる。':'次はもう少し攻めよう。'))}
-var prs={};prEvents().forEach(function(e){if(e.t>=t0)prs[e.name]=1});var pn=Object.keys(prs);if(pn.length)out.push('今日の自己ベスト更新: '+pn.join('、')+' 🎉');
+var prs={};prEvents().forEach(function(e){if(e.t>=t0)prs[e.name]=1});var pn=Object.keys(prs);if(pn.length)out.push('自己ベスト更新: '+pn.join('、')+' 🎉');
 if(!out.length)out.push('記録おつかれさま。続けることがいちばん強い。');
 return coach(out.join('\n'))}
 
@@ -1272,7 +1275,7 @@ function takePhoto(es,id){camFor={es:es,id:id};var c=$('cam');c.value='';c.click
 $('cam').addEventListener('change',function(e){var f=e.target.files&&e.target.files[0];if(!f||!camFor)return;var im=new Image(),u=URL.createObjectURL(f),cf=camFor;im.onload=function(){URL.revokeObjectURL(u);shPh=im;shareCard(cf.es);shPh=null;var t=new Image();t.onload=function(){var c=document.createElement('canvas');c.width=540;c.height=Math.round(540*t.height/t.width);c.getContext('2d').drawImage(t,0,0,c.width,c.height);if(cf.id){photos[cf.id]=c.toDataURL('image/jpeg',.6);if(!put(K.photos,photos))$('shm').textContent='保存容量がいっぱいで写真を保存できなかった。'}};t.src=$('shi').src;emit('wk:photo',{id:cf.id,es:cf.es,img:im})};im.src=u});
 
 // ---- 友達 ----
-function renderFriends(){if(window.WK_CLOUD&&WK_CLOUD.enabled){showPage('fv');WK_CLOUD.friends($('fl'));return}var ps=sesAll.filter(function(x){return photos[x.t0]}).sort(function(a,b){return b.t0-a.t0}),h="<div class='day gc'><b>写真を撮って、友達と共有</b><p class='fn'>トレーニングが終わったら写真を撮って投稿。写真つきの記録だけが、友達のフィードに載るしくみ。</p><p class='fn'>友達への配信は準備中（アプリ版でオンにする予定）。今は、あなたの投稿だけが表示されるよ。</p></div><div class='day gc'><b>友達</b><p class='fn'>まだ友達はいないよ。</p><button class='hb2' disabled style='opacity:.4'>友達を追加（準備中）</button></div><div class='sk' style='margin:14px 0 8px'>MY POSTS</div>";if(!ps.length)h+="<p class='fn'>まだ投稿はないよ。トレーニング後に「📷 写真を撮って友達にシェア」で投稿できる。</p>";else h+="<div class='fg'>"+ps.map(function(x){var d=new Date(x.t0),es=data.filter(function(e){return dkey(e.t)===dkey(x.t0)});return "<div class='fp'><img alt='' src='"+photos[x.t0]+"'><div>"+(d.getMonth()+1)+'/'+d.getDate()+' '+(es.length?titleOf(es):'')+'</div><span>⏱ '+hms(x.dur)+'</span></div>'}).join('')+'</div>';$('fl').innerHTML=h;showPage('fv')}
+function renderFriends(){if(window.WK_CLOUD&&WK_CLOUD.enabled){showPage('fv');WK_CLOUD.friends($('fl'));return}var ps=sesAll.filter(function(x){return photos[x.t0]}).sort(function(a,b){return b.t0-a.t0}),h="<div class='day gc'><b>写真を撮って、友達と共有</b><p class='fn'>トレーニングが終わったら写真を撮って投稿。写真つきの記録だけが、友達のフィードに載るしくみ。</p><p class='fn'>友達への配信は準備中（アプリ版でオンにする予定）。今は、あなたの投稿だけが表示されるよ。</p></div><div class='day gc'><b>友達</b><p class='fn'>まだ友達はいないよ。</p><button class='hb2' disabled style='opacity:.4'>友達を追加（準備中）</button></div><div class='sk' style='margin:14px 0 8px'>MY POSTS</div>";if(!ps.length)h+="<p class='fn'>まだ投稿はないよ。トレーニング後に「📷 写真を撮って友達にシェア」で投稿できる。</p>";else h+="<div class='fg'>"+ps.map(function(x){var d=new Date(x.t0),es=data.filter(function(e){return e.t>=x.t0-60000&&e.t<=x.t0+x.dur});return "<div class='fp'><img alt='' src='"+photos[x.t0]+"'><div>"+(d.getMonth()+1)+'/'+d.getDate()+' '+(es.length?titleOf(es):'')+'</div><span>⏱ '+hms(x.dur)+'</span></div>'}).join('')+'</div>';$('fl').innerHTML=h;showPage('fv')}
 
 // ---- 設定（身長・体重） ----
 var ih=$('ih'),iw=$('iw'),ferr=$('err');
