@@ -303,6 +303,8 @@ document.addEventListener('click',function(e){if(e.target.id==='shc'){var c=$('c
 // ---- クラウドバックアップ（トレーニング終了時に自動） ----
 function backupNow(){if(!user||demo)return Promise.resolve();return api.backup(W.backupPayload())}
 document.addEventListener('wk:done',function(){backupNow().catch(function(){})});
+// 履歴で記録を直したら、全国ランキング用のベストとクラウドバックアップも直す
+document.addEventListener('wk:edit',function(){if(!user)return;setTimeout(syncBests,0);backupNow().catch(function(){})});
 
 // ---- アカウントページ ----
 async function account(el){el.innerHTML='';if(!user){signIn(el,function(){account(el)});return}if(!me)me=await api.me();

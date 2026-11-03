@@ -15,7 +15,8 @@ function apply(){var on=paid||byGrant();if(on===active&&ready)return;active=on;r
 // 招待の特典の期限（ミリ秒）。期限が来たら自動でオフにする
 function grant(u){grantUntil=+u||0;if(gTimer)clearTimeout(gTimer);var left=grantUntil-Date.now();if(left>0&&left<2147483647)gTimer=setTimeout(apply,left+500);apply()}
 function untilText(){var d=new Date(grantUntil);return (d.getMonth()+1)+'月'+d.getDate()+'日'}
-function fromInfo(info){return !!(info&&info.entitlements&&info.entitlements.active&&info.entitlements.active[ENT])}
+// RevenueCat の entitlement は「pro」。名前が違っても、PUMP Pro は1つだけなので何か有効なら Pro とみなす
+function fromInfo(info){var a=info&&info.entitlements&&info.entitlements.active;return !!(a&&(a[ENT]||Object.keys(a).length))}
 
 
 var FEATURES=[

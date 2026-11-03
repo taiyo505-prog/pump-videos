@@ -198,6 +198,17 @@ header{padding:14px 72px 12px 18px;background:#000;border-bottom:1px solid var(-
 .day{background:var(--panel);border:1px solid var(--line);border-radius:12px;margin-bottom:10px;overflow:hidden}
 .dt{display:block;width:100%;text-align:left;border:0;background:none;font-weight:700;padding:14px}
 .dd{padding:0 14px 12px;overflow-x:auto}
+/* 自己ベスト一覧（記録の修正） */
+.bst .bx{display:flex;width:100%;align-items:baseline;justify-content:space-between;gap:8px;border:0;border-top:1px solid var(--line);background:none;color:var(--ink);padding:9px 0;font:inherit;text-align:left}
+.bst .bx b{font-family:var(--F);font-style:italic;color:var(--acc);font-size:15px}
+.bst .bx span{font-size:12px;color:var(--sub);white-space:nowrap}
+.bst .bp{padding:2px 0 10px}
+.bst .br{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:6px 0;border-top:1px dashed var(--line);font-size:13px}
+.bst .br>span{flex:1;min-width:120px}
+.bst .br .hb2{margin:0;padding:6px 12px}
+.bst .br .sec{background:var(--bot);color:var(--ink)}
+.bst .be{display:flex;gap:6px;align-items:center;flex-wrap:wrap;width:100%}
+.bst .be input{width:74px;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:8px;padding:7px;font:inherit}
 .kcal{padding:12px 10px 10px}
 .kch{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
 .kch div{text-align:center}.kch b{display:block;font-size:16px}.kch span{font-size:12px;color:var(--sub)}
@@ -554,10 +565,14 @@ function profUI(){profEl.textContent=profile?'身長'+profile.h+'cm / 体重'+pr
 var stId=null;
 function sTick(){if(!ses)return;var n=Date.now();ttEl.textContent='⏱ '+hms(n-ses.t0);$('tl').textContent='ラップ'+(ses.laps.length+1)+' '+hms(n-ses.last)}
 function sUI(){tmEl.hidden=!ses;if(!ses)$('tl').textContent='';if(!ses){ttEl.textContent='トレーニング時間';restStop()}if(stId)clearInterval(stId);stId=null;if(ses){sTick();stId=setInterval(sTick,500)}inp.disabled=!ses;$('send').disabled=!ses;profUI();qkUI();homeUI();$('st').className=(!ses&&stOn)?'on':''}
-function sStart(){if(ses)return;ses={t0:Date.now(),last:Date.now(),laps:[]};sSave();sUI();emit('wk:start',{t0:ses.t0})}
+// トレーニング中は画面を暗くしない（ブラウザ版。アプリ版は native.js）
+var wakeL=null;function wake(on){if(!navigator.wakeLock||(window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform()&&Capacitor.getPlatform()==='ios'))return;if(on){if(wakeL||document.hidden)return;navigator.wakeLock.request('screen').then(function(l){wakeL=l;l.addEventListener('release',function(){wakeL=null})}).catch(function(){})}else if(wakeL){wakeL.release().catch(function(){});wakeL=null}}
+document.addEventListener('visibilitychange',function(){if(!document.hidden&&ses)wake(true)});
+setTimeout(function(){if(ses)wake(true)},0);
+function sStart(){if(ses)return;ses={t0:Date.now(),last:Date.now(),laps:[]};sSave();sUI();wake(true);emit('wk:start',{t0:ses.t0})}
 // ラップ: 「セット終わり」を押すたびに、前に押してから（最初はスタートから）の時間を記録する
 function sLap(){if(!ses)return;var n=Date.now();ses.laps.push(n-ses.last);ses.last=n;sSave();sUI()}
-function sStop(){if(!ses)return 0;lastCid=ses.t0;var d=Date.now()-ses.t0;sesAll.push({t0:ses.t0,dur:d,laps:ses.laps});ses=null;try{localStorage.removeItem(K.ses)}catch(e){}sSave();sUI();emit('wk:end');return d}
+function sStop(){if(!ses)return 0;lastCid=ses.t0;var d=Date.now()-ses.t0;sesAll.push({t0:ses.t0,dur:d,laps:ses.laps});ses=null;try{localStorage.removeItem(K.ses)}catch(e){}sSave();sUI();wake(false);emit('wk:end');return d}
 // その記録が入っているトレーニング（スタート〜終わり）の時間だけ足す。1回分の記録なら1回分、1日分なら1日分の時間になる
 function sDur(es){var sum=0;sesAll.forEach(function(x){var a=x.t0-60000,b=x.t0+x.dur;if(es.some(function(e){return e.t>=a&&e.t<=b}))sum+=x.dur});return sum}
 $('br').addEventListener('click',function(){$('brs').hidden=true;sLap();restNow();setDone=true});
@@ -894,7 +909,32 @@ c.addEventListener('click',function(e){var b=e.target.closest('button');if(!b)re
 if(dm){var t=new Date(calM.y,calM.m+ +dm,1);calM={y:t.getFullYear(),m:t.getMonth()};draw();return}
 var k=b.getAttribute('data-k');if(k&&days[k])onPick(k)});
 draw()}
-function showHist(){hl.innerHTML='';gcard(hl);var days={},keys=[];data.forEach(function(e){var k=dkey(e.t);if(!days[k]){days[k]=[];keys.push(k)}days[k].push(e)});if(!keys.length)hl.appendChild(document.createTextNode('まだ記録がないよ。右上の＋から始めよう。'));keys.reverse().forEach(function(k){var es=days[k],d=new Date(es[0].t),wk='日月火水木金土'.charAt(d.getDay()),wrap=document.createElement('div'),b=document.createElement('button'),box=document.createElement('div');wrap.className='day';b.className='dt';b.textContent=(d.getMonth()+1)+'/'+d.getDate()+'（'+wk+'）　'+titleOf(es)+' '+titleJa(es)+(sDur(es)?'　⏱ '+hms(sDur(es)):'');box.className='dd';box.innerHTML=tbl(es);var sb=document.createElement('button');sb.className='hb2';sb.textContent='シェア画像';sb.addEventListener('click',function(){shareCard(es)});box.appendChild(sb);var cb=document.createElement('button');cb.className='hb2';cb.textContent='この日のチャット';var ct=document.createElement('div');ct.hidden=true;cb.addEventListener('click',function(){ct.hidden=!ct.hidden;if(!ct.innerHTML)ct.innerHTML=transcript(k)});var pids=sesAll.filter(function(x){return dkey(x.t0)===k&&photos[x.t0]});if(pids.length){var pd=document.createElement('div');pd.className='pth';pd.innerHTML=pids.map(function(x){return "<img alt='' src='"+photos[x.t0]+"'>"}).join('');box.appendChild(pd)}box.appendChild(cb);box.appendChild(ct);box.hidden=true;b.addEventListener('click',function(){box.hidden=!box.hidden});wrap.appendChild(b);wrap.appendChild(box);hl.appendChild(wrap)});showPage('hv')}
+// ---- 自己ベスト一覧（打ち間違いを直す） ----
+// 種目ごとの自己ベスト（推定1RM）を並べる。開くと推定1RMの高い順に記録が出て、重さ・回数を直したり消したりできる
+function refit(e){var k=e.bw?'bw':kind(e.name);if(e.bw){var base=e.w-(e.added||0);e.w=base+(e.added||0)}e.e1=e.reps===1?e.w:e.w*(1+e.reps/30);e.bench=k==='db'?e.e1*2*1.2:k==='bench'?e.e1:k==='narrow'?e.e1*1.1:0}
+var bestOpen=null,bestAll=false;
+function bestCard(parent){var by={};data.forEach(function(e){(by[e.name]=by[e.name]||[]).push(e)});var names=Object.keys(by);if(!names.length)return;
+ names.sort(function(a,b){return by[b].length-by[a].length});
+ var c=document.createElement('div');c.className='day gc bst';
+ var h="<h2>🏆 自己ベスト一覧</h2><p class='fn'>打ち間違えた記録は、種目をタップして直せるよ（「前回」の比較や自己ベストも直る）。</p>";
+ var more=names.length>6&&!bestAll&&names.indexOf(bestOpen)<6;if(more)names=names.slice(0,6);
+ names.forEach(function(n){var l=by[n].slice().sort(function(a,b){return b.e1-a.e1}),b=l[0];
+  h+="<button class='bx' data-bn='"+esc(n)+"'><span style='color:var(--ink);font-size:14px;font-weight:700;white-space:normal'>"+esc(n)+(kind(n)==='db'?' <i style=\"font-style:normal;font-size:11px;color:var(--sub);font-weight:400\">片手</i>':'')+"</span><span>"+setStr(b)+'　推定 <b>'+r1(b.e1)+'</b>kg　'+md(b.t)+(bestOpen===n?' ▲':' ▼')+'</span></button>';
+  if(bestOpen===n){h+="<div class='bp'>"+l.slice(0,12).map(function(e){return "<div class='br' data-bt='"+e.t+"'><span>"+md(e.t)+'　'+setStr(e)+'　<small style="color:var(--sub)">推定'+r1(e.e1)+"kg</small></span><button class='hb2 sec' data-be='1'>直す</button></div>"}).join('')+(l.length>12?"<p class='fn'>ほか "+(l.length-12)+' 件（推定1RMの低い記録）</p>':'')+'</div>'}});
+ if(more)h+="<button class='hb2 sec' data-ba='1' style='background:var(--bot);color:var(--ink)'>ほかの種目も見る（全"+Object.keys(by).length+"種目）</button>";
+ c.innerHTML=h;
+ c.addEventListener('click',function(ev){var t=ev.target,bn=t.closest('[data-bn]');if(bn){bestOpen=bestOpen===bn.getAttribute('data-bn')?null:bn.getAttribute('data-bn');var nc=bestCard(null);c.replaceWith(nc);return}
+  if(t.closest('[data-ba]')){bestAll=true;c.replaceWith(bestCard(null));return}
+  var row=t.closest('[data-bt]');if(!row)return;var e=data.filter(function(x){return String(x.t)===row.getAttribute('data-bt')})[0];if(!e)return;
+  if(t.closest('[data-be]')){row.innerHTML="<div class='be'><span>"+md(e.t)+'</span>'+(e.bw?"追加 <input type='number' inputmode='decimal' step='0.5' data-iw value='"+(e.added||0)+"'>kg":"<input type='number' inputmode='decimal' step='0.25' data-iw value='"+r1(e.w)+"'>kg")+" × <input type='number' inputmode='numeric' step='1' data-ir value='"+e.reps+"'>回</div><div class='be'><button class='hb2' data-bs='1'>保存</button><button class='hb2 sec' data-bx='1'>やめる</button><button class='hb2 sec' data-bd='1' style='color:#ff5a5a'>この記録を消す</button></div>";return}
+  if(t.closest('[data-bx]')){c.replaceWith(bestCard(null));return}
+  if(t.closest('[data-bd]')){var d=t.closest('[data-bd]');if(!d.classList.contains('on')){d.classList.add('on');d.textContent='本当に消す？';return}
+   data=data.filter(function(x){return x!==e});save();emit('wk:edit',{name:e.name});svToast('消したよ');showHist();return}
+  if(t.closest('[data-bs]')){var w=parseFloat(row.querySelector('[data-iw]').value),rp=parseInt(row.querySelector('[data-ir]').value,10);
+   if(!(rp>=1&&rp<=100)||!(w>=0)||(!e.bw&&!(w>0&&w<=500))){svToast('重さと回数を確認してね');return}
+   if(e.bw){var base=e.w-(e.added||0);e.added=w;e.w=base+w}else e.w=w;e.reps=rp;refit(e);save();emit('wk:edit',{name:e.name});svToast('直したよ');showHist();return}});
+ if(parent)parent.appendChild(c);return c}
+function showHist(){hl.innerHTML='';gcard(hl);bestCard(hl);var days={},keys=[];data.forEach(function(e){var k=dkey(e.t);if(!days[k]){days[k]=[];keys.push(k)}days[k].push(e)});if(!keys.length)hl.appendChild(document.createTextNode('まだ記録がないよ。右上の＋から始めよう。'));keys.reverse().forEach(function(k){var es=days[k],d=new Date(es[0].t),wk='日月火水木金土'.charAt(d.getDay()),wrap=document.createElement('div'),b=document.createElement('button'),box=document.createElement('div');wrap.className='day';b.className='dt';b.textContent=(d.getMonth()+1)+'/'+d.getDate()+'（'+wk+'）　'+titleOf(es)+' '+titleJa(es)+(sDur(es)?'　⏱ '+hms(sDur(es)):'');box.className='dd';box.innerHTML=tbl(es);var sb=document.createElement('button');sb.className='hb2';sb.textContent='シェア画像';sb.addEventListener('click',function(){shareCard(es)});box.appendChild(sb);var cb=document.createElement('button');cb.className='hb2';cb.textContent='この日のチャット';var ct=document.createElement('div');ct.hidden=true;cb.addEventListener('click',function(){ct.hidden=!ct.hidden;if(!ct.innerHTML)ct.innerHTML=transcript(k)});var pids=sesAll.filter(function(x){return dkey(x.t0)===k&&photos[x.t0]});if(pids.length){var pd=document.createElement('div');pd.className='pth';pd.innerHTML=pids.map(function(x){return "<img alt='' src='"+photos[x.t0]+"'>"}).join('');box.appendChild(pd)}box.appendChild(cb);box.appendChild(ct);box.hidden=true;b.addEventListener('click',function(){box.hidden=!box.hidden});wrap.appendChild(b);wrap.appendChild(box);hl.appendChild(wrap)});showPage('hv')}
 $('plus').addEventListener('click',function(){go('home')});
 $('sth').addEventListener('click',showHist);
 

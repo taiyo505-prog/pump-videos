@@ -63,6 +63,14 @@ pushRegister:function(save){pushRegister(save)},
 takeInvite:function(){var c=pendingInvite;pendingInvite=null;return c},
 shareFile:shareFile,igStory:igStory,xPost:xPost,saveMedia:saveMedia,musicState:musicState};
 
+// ---- トレーニング中は画面を暗くしない（スタートで点けっぱなし、終わりで元に戻す） ----
+function awake(on){var PS=P.PumpShare;if(PS&&ios)PS.keepAwake({on:!!on}).catch(function(){})}
+document.addEventListener('wk:start',function(){awake(true)});
+document.addEventListener('wk:end',function(){awake(false)});
+// アプリを開き直したとき、トレーニングの途中なら点けっぱなしに戻す
+setTimeout(function(){awake(window.WK&&window.WK.session&&window.WK.session())},500);
+document.addEventListener('visibilitychange',function(){if(!document.hidden)awake(window.WK&&window.WK.session&&window.WK.session())});
+
 // ---- ストアのレビュー依頼（星をタップしてそのまま送れる Apple 純正の画面） ----
 // 気分のいい時に出す: 自己ベストを更新した時か、トレーニングを「終わり」にした時。
 // 3日以上トレーニングした人だけ、60日に1回まで（OS 側でも年3回までに制限される。TestFlight 版では Apple の仕様で出ない）
