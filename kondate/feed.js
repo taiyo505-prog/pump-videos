@@ -36,5 +36,6 @@ var local = {
 };
 
 window.FEED = local;
+window.FEED_LOCAL = { me: me, ng: ng, get: get, put: put, block: local.block, unblockAll: local.unblockAll, blocked: function () { return get(BL, []); } };
 // サーバー版は supabase の設定が入ったら feed-cloud.js が window.FEED を差し替える
 })();
