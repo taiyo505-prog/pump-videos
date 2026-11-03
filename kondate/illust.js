@@ -115,7 +115,7 @@ function kind(r) {
   if (/トースト|ブルスケッタ/.test(n)) return 'toast';
   if (/お好み焼き|チヂミ|ガレット|ねぎ焼き|たこ焼き/.test(n)) return 'okonomi';
   if (/餃子|ぎょうざ/.test(n) && !/スープ|ピザ/.test(n)) return 'gyoza';
-  if (/鍋|ポトフ|チゲ/.test(n)) return 'nabe';
+  if (/鍋(?!肉)|ポトフ|チゲ/.test(n)) return 'nabe';
   if (r.cat === '汁物') return 'soup';
   if (/ハンバーグ|つくね|肉詰め|ミートボール|はさみ焼き|ロールキャベツ/.test(n)) return 'hamburg';
   if (/唐揚げ|から揚げ|竜田|フライ|カツ|天ぷら|かき揚げ|揚げ|南蛮|フリット|リング|ナゲット|ポテト$|フライドポテト/.test(n) && !/揚げびたし|厚揚げ|油揚げ|揚げ出し/.test(n)) return 'fry';

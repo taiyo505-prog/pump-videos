@@ -116,7 +116,7 @@ var TIP = {
 function kindOf(r) {
   var n = r.name, s = r.steps.join('');
   if (r.cat === 'デザート') return /焼|オーブン|トースター/.test(s) ? ['bake', 'dessert'] : ['dessert'];
-  if (/鍋|ポトフ|チゲ/.test(n)) return ['nabe', 'soup'];
+  if (/鍋(?!肉)|ポトフ|チゲ/.test(n)) return ['nabe', 'soup'];
   if (r.cat === '汁物') return ['soup'];
   if (/チャーハン|炒飯|ピラフ/.test(n)) return ['rice', 'stir'];
   if (/丼|ライス/.test(n)) return ['don', /揚げ/.test(s) ? 'fry' : /煮/.test(s) ? 'simmer' : 'stir'];
@@ -190,6 +190,15 @@ function hint(t, r) {
   if (/塩もみ|塩でもん/.test(t)) h.push('塩をふって5〜10分おき、出てきた水分をぎゅっとしぼる。');
   if (/水にさら/.test(t)) h.push('5分くらいさらして、水気をよくきる。');
   if (/漬け|漬ける|漬けて/.test(t) && !/漬け物/.test(t)) h.push('ポリ袋に入れて空気を抜くと、少ない調味料でも全体に味が回る。');
+  if (/^【先に準備】/.test(t)) return { heat: null, hint: ['計量スプーンは、すりきり（山盛りにしない）で計る。'] };
+  if (/味見/.test(t)) return { heat: null, hint: ['味見は小皿にとって、少し冷ましてからすると正確にわかる。'] };
+  if (/油をきり/.test(t)) return { heat: null, hint: ['重ねて置くと蒸気で衣がしなっとするので、立てるか並べて置く。'] };
+  if (/(ふる|ふって)/.test(t) && /塩|こしょう/.test(t) && !h.length) h.push('高い位置から全体にふると、ムラなくかかる。');
+  if (/しぼる|しぼって/.test(t) && !h.length) h.push('手でぎゅっと、水気が出なくなるまでしっかりしぼる。');
+  if (/ほぐ/.test(t) && !h.length) h.push('菜箸でほぐしながら、かたまりが残らないように。');
+  if (/(溶か|とかす|とかし)/.test(t) && !/味噌/.test(t) && !h.length) { if (!heat) heat = '弱火'; h.push('弱火でゆっくり。焦がさないように混ぜながら。'); }
+  if (/器に盛|盛りつけ|盛る/.test(t) && !h.length) h.push('温かい料理は器も温めておくと冷めにくい。');
+  if (/(のせる|散らす|添える)/.test(t) && !h.length) h.push('彩りの緑（ねぎ・大葉など）は最後にのせると、色がきれい。');
   if (/巻/.test(t) && !/のり|レタス/.test(t)) h.push('巻き終わりを下にして焼き始めると、ほどけない。');
   if (/包/.test(t) && /皮|餃子/.test(t)) h.push('皮のふちに水をつけて、空気を抜きながらしっかり閉じる。');
   if (/あえ/.test(t) && !h.length) h.push('食べる直前にあえると、水っぽくならない。');
@@ -218,6 +227,14 @@ window.recipeDetail = function (r) {
     if (/パスタをゆでる/.test(x[1]) && !/ゆで/.test(st)) return;
     tips.push(x[1]);
   });
-  return { prep: prep, steps: r.steps.map(function (t) { var o = hint(t, r); return { t: t, heat: o.heat, hint: o.hint }; }), tips: tips.slice(0, 7), keep: keep(r, kinds) };
+  var steps = r.steps.slice();
+  // 最初に「調味料を合わせておく」手順を足す（炒め物・焼き物・丼などで調味料が3つ以上のとき）
+  var seas = r.ing.filter(function (i) { return i.pantry && !/^(水|油|ごま油|オリーブオイル|塩|こしょう|塩こしょう|片栗粉|小麦粉|パン粉|白ごま|かつお節|刻みのり|にんにく|生姜|バター|米)$/.test(i.n) && !/少々|適量/.test(i.q); });
+  if (seas.length >= 3 && /stir|grill|don|rice|fry/.test(kinds.join()) && !/混ぜておく|合わせ/.test(steps.join(''))) steps.unshift('【先に準備】' + seas.map(function (i) { return i.n; }).join('・') + 'を小さな器に入れて、よく混ぜておく（炒めながら計ると焦げるので、先に用意しておくのがコツ）。');
+  // 最後に味見・仕上げの手順を足す
+  if (/soup|simmer|nabe/.test(kinds.join()) && !/味見/.test(steps.join(''))) steps.push('味見をして、薄ければ醤油か塩をほんの少し、濃ければ水を少し足して調整する。熱いうちに器に盛る。');
+  else if (/stir|grill/.test(kinds.join()) && !/盛/.test(steps[steps.length - 1])) steps.push('火を止めて、フライパンに残ったたれもかけて器に盛る。');
+  else if (/fry/.test(kinds.join())) steps.push('揚げたものはキッチンペーパーか網にのせて油をきり、熱いうちに盛りつける。');
+  return { prep: prep, steps: steps.map(function (t) { var o = hint(t, r); return { t: t, heat: o.heat, hint: o.hint, noq: /^(味見|火を止めて、フライパン|揚げたもの)/.test(t) }; }), tips: tips.slice(0, 7), keep: keep(r, kinds) };
 };
 })();

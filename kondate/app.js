@@ -175,6 +175,38 @@ function plateHtml(r) {
   return "<div class='plate' style='--p1:" + c[0] + ';--p2:' + c[1] + "'><div class='dish'><i>" + r.emoji + '</i></div>' +
     side.map(function (e, k) { return "<span style='left:" + pos[k][0] + '%;top:' + pos[k][1] + "%'>" + e + '</span>'; }).join('') + '</div>';
 }
+// 作り方の文に、調味料・液体の量を書きこむ（例: 醤油 → 醤油（大さじ2））
+var LIQ = { '牛乳': 1, '生クリーム': 1, '豆乳': 1, 'ヨーグルト': 1 };
+var ALIAS_Q = { '鶏ガラスープの素': ['鶏ガラスープの素', '鶏ガラ'], 'オイスターソース': ['オイスターソース', 'オイスター'], 'マヨネーズ': ['マヨネーズ', 'マヨ'], '顆粒だし': ['顆粒だし', 'だし'], '白だし': ['白だし'], 'コンソメ': ['コンソメ'], '焼肉のタレ': ['焼肉のタレ'], 'レモン汁': ['レモン汁'], 'ケチャップ': ['ケチャップ'] };
+function annot(text, r) {
+  var items = r.ing.filter(function (i) { return (i.pantry || LIQ[i.n]) && i.q && !/^(少々|適量|少し|たっぷり)$/.test(i.q); });
+  var keys = [];
+  items.forEach(function (i) { (ALIAS_Q[i.n] || [i.n]).forEach(function (a) { keys.push([a, i]); }); });
+  keys.sort(function (a, b) { return b[0].length - a[0].length; });
+  var marks = [], used = {}, t = text;
+  keys.forEach(function (k) {
+    if (used[k[1].n]) return;
+    var idx = t.indexOf(k[0]);
+    if (idx < 0) return;
+    // 「塩こしょう」の中の「塩」など、もっと長い名前の一部ならとばす
+    if (k[0] === '塩' && /^塩(こしょう|もみ|ゆで|昆布|少々|をふ)/.test(t.slice(idx))) return;
+    if (k[0] === '酢' && /黒酢|甘酢|酢の物|酢水/.test(t.slice(Math.max(0, idx - 1), idx + 2))) return;
+    if (k[0] === '水' && /(水気|水に|水で|冷水|水溶き|水煮|水分|水切り|流水|塩水|酢水)/.test(t.slice(Math.max(0, idx - 1), idx + 3))) return;
+    if (k[0] === 'だし' && /白だし/.test(t.slice(Math.max(0, idx - 1), idx + 2))) return;
+    if (k[0] === '油' && /(ごま油|オリーブオイル|油揚げ|油抜き|ラー油|油を(きる|ふ))/.test(t.slice(Math.max(0, idx - 3), idx + 3))) return;
+    used[k[1].n] = 1;
+    var tag = '\u0001' + marks.length + '\u0002';
+    marks.push(k[0] + "<small class='qq'>（" + esc(scaleQ(k[1].q, st.srv)) + '）</small>');
+    t = t.slice(0, idx) + tag + t.slice(idx + k[0].length);
+  });
+  var gi = t.indexOf('調味料');
+  if (gi >= 0 && !/調味料（|合わせた調味料|合わせ調味料/.test(t)) {
+    var rest = items.filter(function (i) { return !used[i.n] && !/^(水|油|ごま油|オリーブオイル)$/.test(i.n); });
+    if (rest.length) { var tg = '\u0001' + marks.length + '\u0002'; marks.push('調味料' + "<small class='qq'>（" + rest.map(function (i) { return esc(i.n) + ' ' + esc(scaleQ(i.q, st.srv)); }).join('・') + '）</small>'); t = t.slice(0, gi) + tg + t.slice(gi + 3); }
+  }
+  t = esc(t);
+  return t.replace(/\u0001(\d+)\u0002/g, function (m, n) { return marks[+n]; });
+}
 function openRecipe(id, fromSpin) {
   var r = byId[id]; if (!r) return;
   var old = $('recOv'); if (old) old.remove();
@@ -195,7 +227,7 @@ function openRecipe(id, fromSpin) {
     h += '</ul>' + (need.length ? "<button class='sub2' data-r='shop'>🛒 買い足し " + need.length + ' 品を買い物リストへ</button>' : "<p class='note' style='text-align:center;margin:10px 0 0'>🎉 足りない食材なし！今すぐ作れるよ</p>") + '</div>';
     var dt = window.recipeDetail ? window.recipeDetail(r) : { prep: [], steps: r.steps.map(function (t) { return { t: t, hint: [] }; }), tips: [], keep: '' };
     if (dt.prep.length) h += "<div class='card'><div class='ct'>🔪 下ごしらえ</div><ul class='prep'>" + dt.prep.map(function (p) { return '<li><b>' + esc(p.n) + '</b>' + esc(p.t) + '</li>'; }).join('') + '</ul></div>';
-    h += "<div class='card'><div class='ct'>👩‍🍳 作り方</div><ol class='steps'>" + dt.steps.map(function (s) { return '<li>' + (s.heat ? "<span class='heat'>🔥 " + esc(s.heat) + '</span>' : '') + esc(s.t) + (s.hint.length ? "<div class='hint2'>" + s.hint.map(function (x) { return '💡 ' + esc(x); }).join('<br>') + '</div>' : '') + '</li>'; }).join('') + '</ol></div>';
+    h += "<div class='card'><div class='ct'>👩‍🍳 作り方</div><ol class='steps'>" + dt.steps.map(function (s) { return '<li>' + (s.heat ? "<span class='heat'>🔥 " + esc(s.heat) + '</span>' : '') + (s.noq ? esc(s.t) : annot(s.t, r)) + (s.hint.length ? "<div class='hint2'>" + s.hint.map(function (x) { return '💡 ' + esc(x); }).join('<br>') + '</div>' : '') + '</li>'; }).join('') + '</ol></div>';
     if (dt.tips.length) h += "<div class='card'><div class='ct'>✨ おいしく作るコツ</div><ul class='tips'>" + dt.tips.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul>' + (dt.keep ? "<p class='keep'>🧊 保存のめやす：" + esc(dt.keep) + '</p>' : '') + '</div>';
     h += "<button class='big' data-r='made'>📷 作った！写真を投稿する<small>みんなのごはんに載るよ</small></button>";
     h += "<div class='acts'><button class='mini" + (fav ? ' on' : '') + "' data-r='fav'>" + (fav ? '❤️ お気に入り済み' : '🤍 お気に入り') + "</button><button class='mini' data-r='done'>🍽 作った（投稿しない）</button><button class='mini' data-r='again'>🎰 もう一回まわす</button><button class='mini' data-r='posts'>👀 みんなの" + esc(r.name.length > 6 ? 'ごはん' : r.name) + '</button></div>';
