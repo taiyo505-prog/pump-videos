@@ -1,0 +1,1 @@
+window.KONDATE_CONFIG={};
