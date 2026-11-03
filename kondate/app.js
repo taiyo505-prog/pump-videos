@@ -167,6 +167,7 @@ function scaleQ(q, n) {
 // レシピのイメージ: お皿に料理と主な食材をのせたイラスト
 var PLATE = { '和': ['#F6E7D2', '#C9A27E'], '洋': ['#FCE3DC', '#E59A86'], '中': ['#FBE4C9', '#E0A05E'], '韓': ['#FADADA', '#D9706B'], 'エスニック': ['#E5F2D9', '#8DB870'] };
 function plateHtml(r) {
+  if (window.dishSVG) return "<div class='dill'>" + window.dishSVG(r) + '</div>';
   var c = PLATE[r.genre] || PLATE['和'], seen = {}, side = [];
   r.ing.forEach(function (i) { var f = FOODSET[i.n]; if (f && !seen[f[1]] && f[1] !== r.emoji && side.length < 5) { seen[f[1]] = 1; side.push(f[1]); } });
   var pos = [[50, 9], [88, 36], [76, 80], [24, 80], [12, 36]];
