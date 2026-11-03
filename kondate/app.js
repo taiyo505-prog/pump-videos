@@ -49,11 +49,12 @@ function score(r) { var n = 0; r.ing.forEach(function (i) { if (i.food && has(i.
 function needCount(r) { var n = 0; r.ing.forEach(function (i) { if (i.food && !has(i.n)) n++; }); return n; }
 function foodHits(q) { var k = kana(q); if (!k) return []; return FOODS.filter(function (f) { return kana(f[0]).indexOf(k) >= 0 || loose(q, f[0]); }); }
 function customHits(q) { return RECIPES.filter(function (r) { return loose(q, r.name) || r.ing.some(function (i) { return loose(q, i.n); }); }).length; }
+function ficon(f) { return (window.FOOD_ICON && window.FOOD_ICON[f[0]]) || f[1]; }
 function fdCls(n) { return st.picked.indexOf(n) < 0 ? '' : st.must.indexOf(n) >= 0 ? ' on must' : ' on'; }
 function searchHtml(q) {
   if (!q) return '';
   var l = foodHits(q).slice(0, 24), h = '';
-  if (l.length) h += "<div class='foods'>" + l.map(function (f) { return "<button class='fd" + fdCls(f[0]) + "' data-food='" + esc(f[0]) + "'><i>" + f[1] + '</i>' + esc(f[0]) + '</button>'; }).join('') + '</div>';
+  if (l.length) h += "<div class='foods'>" + l.map(function (f) { return "<button class='fd" + fdCls(f[0]) + "' data-food='" + esc(f[0]) + "'><i>" + ficon(f) + '</i>' + esc(f[0]) + '</button>'; }).join('') + '</div>';
   if (!FOODSET[q]) { var n = customHits(q); h += "<button class='sub2' data-add='" + esc(q) + "' style='margin-top:8px'>＋「" + esc(q) + "」を食材に追加" + (n ? '（' + n + '品で使える）' : '') + '</button>'; }
   return h;
 }
@@ -86,7 +87,7 @@ function homeHtml() {
   h += "<p class='hint'>1回タップ <b class='h1'>✓ 使いたい</b>（どれか使えればOK）　2回タップ <b class='h2'>★ ぜったい使う</b></p>";
   h += "<input id='fq' class='fq' type='search' autocomplete='off' placeholder='🔍 食材をさがす（なければ追加OK）'><div id='fqr'></div>";
   h += "<div class='tabs'>" + cats.map(function (c) { var n = FOODS.filter(function (f) { return f[2] === c && st.picked.indexOf(f[0]) >= 0; }).length; return "<button data-cat='" + c + "' class='" + (st.cat === c ? 'on' : '') + "'>" + c + (n ? ' ' + n : '') + '</button>'; }).join('') + '</div>';
-  h += "<div class='foods'>" + FOODS.filter(function (f) { return f[2] === st.cat; }).map(function (f) { return "<button class='fd" + fdCls(f[0]) + "' data-food='" + esc(f[0]) + "'><i>" + f[1] + '</i>' + esc(f[0]) + '</button>'; }).join('') + '</div>';
+  h += "<div class='foods'>" + FOODS.filter(function (f) { return f[2] === st.cat; }).map(function (f) { return "<button class='fd" + fdCls(f[0]) + "' data-food='" + esc(f[0]) + "'><i>" + ficon(f) + '</i>' + esc(f[0]) + '</button>'; }).join('') + '</div>';
   h += "<div class='picked'>" + (st.picked.length ? st.picked.map(function (p) { var mu = st.must.indexOf(p) >= 0; return "<span data-food='" + esc(p) + "' class='" + (mu ? 'mu' : FOODSET[p] ? '' : 'cu') + "'>" + (mu ? '★' : FOODSET[p] ? '' : '✏️') + esc(p) + "<b data-unpick='" + esc(p) + "'>×</b></span>"; }).join('') : "<span style='background:none;color:var(--sub);padding:4px 0'>えらばないと、全部のレシピから決めるよ</span>") + '</div></div>';
   h += "<div class='card'><div class='ct'><span class='no'>2</span>しぼりこみ（なくてもOK）</div>";
   h += "<div class='fll'>しゅるい</div><div class='fl'>" + [['all', 'ぜんぶ'], ['主菜', '🍖 主菜'], ['丼・麺', '🍚 丼・麺'], ['副菜', '🥗 副菜'], ['汁物', '🥣 汁物'], ['デザート', '🍮 デザート']].map(function (x) { return "<button data-fc='" + x[0] + "' class='" + (st.flt.cat === x[0] ? 'on' : '') + "'>" + x[1] + '</button>'; }).join('') + '</div>';
