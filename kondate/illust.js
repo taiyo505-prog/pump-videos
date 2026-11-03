@@ -89,7 +89,8 @@ function kind(r) {
     if (/ケーキ|ブラウニー|タルト/.test(n)) return 'cake';
     if (/クッキー|クランチ/.test(n)) return 'cookie';
     if (/パンケーキ|ホットケーキ|どら焼き|クレープ/.test(n)) return 'pancake';
-    if (/トースト|サンド/.test(n)) return 'toast';
+    if (/サンド/.test(n)) return 'sandwich';
+    if (/トースト/.test(n)) return 'toast';
     if (/ドーナツ/.test(n)) return 'donut';
     if (/もち|ぜんざい|大福/.test(n)) return 'mochi';
     if (/大学いも|スイートポテト/.test(n)) return 'imo';
@@ -118,7 +119,7 @@ function kind(r) {
   if (r.cat === '汁物') return 'soup';
   if (/ハンバーグ|つくね|肉詰め|ミートボール|はさみ焼き|ロールキャベツ/.test(n)) return 'hamburg';
   if (/唐揚げ|から揚げ|竜田|フライ|カツ|天ぷら|かき揚げ|揚げ|南蛮|フリット|リング|ナゲット|ポテト$|フライドポテト/.test(n) && !/揚げびたし|厚揚げ|油揚げ|揚げ出し/.test(n)) return 'fry';
-  if (/卵焼き|だし巻き|オムレツ|しりしり|ピカタ|茶碗蒸し|かに玉|ニラ玉/.test(n)) return /茶碗蒸し/.test(n) ? 'chawan' : 'eggdish';
+  if (/卵焼き|だし巻き|オムレツ|しりしり|ピカタ|茶碗蒸し|かに玉|ニラ玉|卵炒め/.test(n)) return /茶碗蒸し/.test(n) ? 'chawan' : 'eggdish';
   if (/やっこ|揚げ出し|豆腐ステーキ|冷ややっこ/.test(n)) return 'tofu';
   if (!/缶/.test(n) && /(鮭|サバ|さんま|ぶり|アジ|いわし|たら|サーモン|まぐろ)/.test(n) && /焼|ムニエル|照り|煮|かば|ちゃんちゃん/.test(n) && r.cat === '主菜') return 'fish';
   if (/サラダ|カルパッチョ|カプレーゼ|コールスロー|マリネ|ラペ/.test(n)) return 'salad';
@@ -326,7 +327,7 @@ D.eggdish = function (R, r) {
   var h = plate(120, 102, 104, 46), n = r.name;
   if (/卵焼き|だし巻き/.test(n)) { for (var i = 0; i < 4; i++) { var x = 66 + i * 30; h += "<rect x='" + x + "' y='70' width='26' height='40' rx='5' fill='#F7D24A' stroke='#E8B830'/><path d='M" + (x + 5) + " 78 q8 6 16 0 M" + (x + 5) + " 90 q8 6 16 0 M" + (x + 5) + " 102 q8 6 16 0' stroke='#F2C030' fill='none'/>"; if (has(r, /明太子/)) h += "<circle cx='" + (x + 13) + "' cy='92' r='5' fill='#E8604E'/>"; if (has(r, /ねぎ/)) h += greens(R, x + 13, 90, 8, 14, 4); } return h + "<rect x='178' y='92' width='26' height='14' rx='4' fill='#F5F2E6'/>"; }
   if (/しりしり/.test(n)) return h + chunks(R, ['#F08A2C', '#F7D24A', '#F08A2C'], 120, 96, 66, 26, 40, 12, 'leaf');
-  if (/トマト/.test(n) || /ニラ玉|かに玉/.test(n)) { h += chunks(R, ['#F7D24A', '#FBE68A'], 120, 96, 64, 26, 16, 22, 'leaf'); if (/かに玉/.test(n)) h += "<ellipse cx='120' cy='96' rx='60' ry='24' fill='#C8502E' opacity='.45'/>"; return h + chunks(R, foodCols(r, /卵/), 120, 96, 58, 22, 10, 10); }
+  if (/トマト|卵炒め/.test(n) || /ニラ玉|かに玉/.test(n)) { h += chunks(R, ['#F7D24A', '#FBE68A'], 120, 96, 64, 26, 16, 22, 'leaf'); if (/かに玉/.test(n)) h += "<ellipse cx='120' cy='96' rx='60' ry='24' fill='#C8502E' opacity='.45'/>"; return h + chunks(R, foodCols(r, /卵/), 120, 96, 58, 22, 10, 10); }
   if (/ピカタ/.test(n)) { for (var j = 0; j < 4; j++) h += "<ellipse cx='" + (70 + j * 26) + "' cy='" + (92 + (j % 2) * 8) + "' rx='20' ry='14' fill='#F2D060' stroke='#D8B040'/>"; return h + "<ellipse cx='178' cy='96' rx='12' ry='8' fill='#D8302A'/>"; }
   h += "<path d='M50 104 Q60 60 120 60 Q180 60 190 104 Q120 122 50 104 Z' fill='#F7D24A'/><path d='M74 84 Q100 66 136 68' stroke='#FFF2B0' stroke-width='8' fill='none' stroke-linecap='round' opacity='.7'/>";
   if (has(r, /ケチャップ/)) h += "<path d='M90 80 q10 -8 20 0 t20 0 t20 0' stroke='#D8302A' stroke-width='6' fill='none' stroke-linecap='round'/>";

@@ -174,7 +174,7 @@ var R = [
 ['しらすと大根おろしの丼','和','丼・麺',5,'🐟',430,[['しらす','40g'],['大根','5cm'],['ごはん','2杯分'],['ポン酢','適量'],['刻みのり','適量']],
  ['大根をすりおろして軽く水気をきる。','ごはんに大根おろしとしらすをのせる。','刻みのりを散らす。','ポン酢をかけて食べる。']]
 ];
-[window.KONDATE_MORE, window.KONDATE_MORE2, window.KONDATE_MORE3].forEach(function (MORE) { if (MORE) { FOODS = FOODS.concat(MORE.foods || []); PANTRY = PANTRY.concat(MORE.pantry || []); var seen = {}; R.forEach(function (r) { seen[r[0]] = 1; }); (MORE.recipes || []).forEach(function (r) { if (!seen[r[0]]) { seen[r[0]] = 1; R.push(r); } }); } });
+[window.KONDATE_MORE, window.KONDATE_MORE2, window.KONDATE_MORE3, window.KONDATE_MORE4].forEach(function (MORE) { if (MORE) { FOODS = FOODS.concat(MORE.foods || []); PANTRY = PANTRY.concat(MORE.pantry || []); var seen = {}; R.forEach(function (r) { seen[r[0]] = 1; }); (MORE.recipes || []).forEach(function (r) { if (!seen[r[0]]) { seen[r[0]] = 1; R.push(r); } }); } });
 var PANTRY_SET = {}; PANTRY.forEach(function (p) { PANTRY_SET[p] = 1; });
 var FOOD_SET = {}; FOODS.forEach(function (f) { FOOD_SET[f[0]] = f; });
 var recipes = R.map(function (r, i) {
