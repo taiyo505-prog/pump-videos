@@ -193,7 +193,10 @@ function openRecipe(id, fromSpin) {
       h += "<li class='" + cls + "'><span class='mk'>" + (cls === 'have' ? '✓' : cls === 'need' ? '●' : '・') + '</span>' + esc(i.n) + (cls === 'need' ? " <span class='tag'>買い足し</span>" : '') + "<span class='q'>" + esc(scaleQ(i.q, st.srv)) + '</span></li>';
     });
     h += '</ul>' + (need.length ? "<button class='sub2' data-r='shop'>🛒 買い足し " + need.length + ' 品を買い物リストへ</button>' : "<p class='note' style='text-align:center;margin:10px 0 0'>🎉 足りない食材なし！今すぐ作れるよ</p>") + '</div>';
-    h += "<div class='card'><div class='ct'>👩‍🍳 作り方</div><ol class='steps'>" + r.steps.map(function (s) { return '<li>' + esc(s) + '</li>'; }).join('') + '</ol></div>';
+    var dt = window.recipeDetail ? window.recipeDetail(r) : { prep: [], steps: r.steps.map(function (t) { return { t: t, hint: [] }; }), tips: [], keep: '' };
+    if (dt.prep.length) h += "<div class='card'><div class='ct'>🔪 下ごしらえ</div><ul class='prep'>" + dt.prep.map(function (p) { return '<li><b>' + esc(p.n) + '</b>' + esc(p.t) + '</li>'; }).join('') + '</ul></div>';
+    h += "<div class='card'><div class='ct'>👩‍🍳 作り方</div><ol class='steps'>" + dt.steps.map(function (s) { return '<li>' + (s.heat ? "<span class='heat'>🔥 " + esc(s.heat) + '</span>' : '') + esc(s.t) + (s.hint.length ? "<div class='hint2'>" + s.hint.map(function (x) { return '💡 ' + esc(x); }).join('<br>') + '</div>' : '') + '</li>'; }).join('') + '</ol></div>';
+    if (dt.tips.length) h += "<div class='card'><div class='ct'>✨ おいしく作るコツ</div><ul class='tips'>" + dt.tips.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul>' + (dt.keep ? "<p class='keep'>🧊 保存のめやす：" + esc(dt.keep) + '</p>' : '') + '</div>';
     h += "<button class='big' data-r='made'>📷 作った！写真を投稿する<small>みんなのごはんに載るよ</small></button>";
     h += "<div class='acts'><button class='mini" + (fav ? ' on' : '') + "' data-r='fav'>" + (fav ? '❤️ お気に入り済み' : '🤍 お気に入り') + "</button><button class='mini' data-r='done'>🍽 作った（投稿しない）</button><button class='mini' data-r='again'>🎰 もう一回まわす</button><button class='mini' data-r='posts'>👀 みんなの" + esc(r.name.length > 6 ? 'ごはん' : r.name) + '</button></div>';
     h += "<button class='sub2' data-r='close' style='border-color:var(--line);color:var(--sub)'>とじる</button></div>";

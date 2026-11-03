@@ -59,6 +59,14 @@ input,textarea,select{font-family:inherit}
 .plate .dish i{font-style:normal;font-size:76px;line-height:1;filter:drop-shadow(0 4px 3px rgba(0,0,0,.15))}
 .plate span{position:absolute;transform:translate(-50%,-50%);font-size:28px;background:#fff;border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.12)}
 .dill{width:100%;max-width:320px;margin:0 auto 4px;animation:pop .5s ease;background:radial-gradient(ellipse at 50% 60%,#FFE9D6 0,#FFF6EA 70%);border-radius:24px}.dill svg{display:block;width:100%;height:auto}
+.heat{display:inline-block;background:#FFE3D6;color:#E0552A;font-size:11px;font-weight:800;border-radius:999px;padding:1px 8px;margin-right:6px;vertical-align:1px}
+.hint2{margin-top:6px;background:#FFF8E8;border-radius:10px;padding:7px 10px;font-size:12px;line-height:1.7;color:#6A5A48}
+.prep,.tips{margin:0;padding:0;list-style:none}
+.prep li,.tips li{padding:8px 0;border-bottom:1.5px dashed var(--line);font-size:13px;line-height:1.7}
+.prep li:last-child,.tips li:last-child{border-bottom:0}
+.prep li b{display:inline-block;background:var(--soft);border-radius:8px;padding:0 8px;margin-right:6px;font-size:12px}
+.tips li::before{content:'✓ ';color:#5DBB7A;font-weight:900}
+.keep{margin:10px 0 0;background:#EAF6FB;border-radius:10px;padding:8px 10px;font-size:12px;line-height:1.6}
 .rph{position:relative;border-radius:20px;overflow:hidden;aspect-ratio:1/1;max-width:320px;margin:0 auto 6px;box-shadow:0 6px 18px rgba(0,0,0,.12)}
 .rph img{width:100%;height:100%;object-fit:cover;display:block}
 .rph span{position:absolute;left:8px;bottom:8px;background:rgba(255,255,255,.9);border-radius:999px;padding:3px 10px;font-size:11px;font-weight:800}
@@ -200,6 +208,7 @@ textarea.tx{width:100%;border:2px solid var(--line);border-radius:16px;padding:1
 <script src="feed-cloud.js"></script>
 <script src="icons.js"></script>
 <script src="illust.js"></script>
+<script src="detail.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
