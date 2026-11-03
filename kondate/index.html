@@ -43,6 +43,21 @@ input,textarea,select{font-family:inherit}
 .picked span{background:var(--soft);border-radius:999px;padding:4px 10px;font-size:12px;font-weight:700}
 .picked span b{color:var(--acc);margin-left:4px}
 .picked span.cu{background:#FFF0C2}
+.picked span{cursor:pointer}
+.picked span.mu{background:#FF6B6B;color:#fff}.picked span.mu b{color:#fff}
+.fd.must{border-color:#FF5A5A;background:#FFE3E3}
+.fd.must::after{content:'★';background:#FF5A5A}
+.hint{font-size:11px;color:var(--sub);margin:0 0 6px;line-height:1.6}
+.hint b{font-weight:800;border-radius:999px;padding:1px 7px;white-space:nowrap}
+.hint .h1{background:#FFF0E6;color:var(--acc)}.hint .h2{background:#FFE3E3;color:#E04848}
+.plate{--p1:#F6E7D2;--p2:#C9A27E;position:relative;width:190px;height:190px;margin:4px auto 6px;border-radius:50%;background:radial-gradient(circle at 50% 50%,#fff 0 52%,var(--p1) 53% 60%,#fff 61% 66%,var(--p1) 67% 100%);box-shadow:0 8px 0 var(--p2),0 14px 24px rgba(120,70,30,.18);animation:pop .5s ease}
+.plate .dish{position:absolute;inset:22%;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.plate .dish i{font-style:normal;font-size:76px;line-height:1;filter:drop-shadow(0 4px 3px rgba(0,0,0,.15))}
+.plate span{position:absolute;transform:translate(-50%,-50%);font-size:28px;background:#fff;border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.12)}
+.rph{position:relative;border-radius:20px;overflow:hidden;aspect-ratio:1/1;max-width:320px;margin:0 auto 6px;box-shadow:0 6px 18px rgba(0,0,0,.12)}
+.rph img{width:100%;height:100%;object-fit:cover;display:block}
+.rph span{position:absolute;left:8px;bottom:8px;background:rgba(255,255,255,.9);border-radius:999px;padding:3px 10px;font-size:11px;font-weight:800}
+.rths{display:flex;gap:6px;justify-content:center;margin:0 0 6px}.rths img{width:48px;height:48px;border-radius:10px;object-fit:cover}
 .fq{width:100%;box-sizing:border-box;border:2px solid var(--soft);border-radius:14px;padding:10px 12px;font:inherit;font-size:14px;background:#fff;margin:4px 0 8px;outline:none}
 .fq:focus{border-color:var(--acc)}
 #fqr .foods{margin-bottom:6px}
