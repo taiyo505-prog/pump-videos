@@ -468,7 +468,7 @@ function loadFeed() {
 }
 function postHtml(p) {
   var r = byId[p.recipe_id];
-  return "<div class='post' data-pid='" + esc(p.id) + "'><div class='ph'><img loading='lazy' alt='' src='" + esc(p.photo) + "'>" + (r ? "<button class='rt' data-open='" + r.id + "' style='border:0'>" + r.emoji + ' ' + esc(r.name) + ' のレシピ ›</button>' : '') + "</div><div class='bd2'><div class='who'><span class='av'>" + esc(p.avatar || '🍙') + '</span>' + esc(p.name || 'ななしさん') + '<small>' + ago(p.t) + '</small></div>' + (p.caption ? "<div class='cap'>" + esc(p.caption) + '</div>' : '') +
+  return "<div class='post' data-pid='" + esc(p.id) + "'><div class='ph'><img loading='lazy' alt='' src='" + esc(p.photo) + "'>" + (r ? "<button class='rt' data-open='" + r.id + "' style='border:0'>" + r.emoji + ' ' + esc(r.name) + ' のレシピ ›</button>' : '') + "</div><div class='bd2'><div class='who'>" + avHtml(p) + esc(p.name || 'ななしさん') + '<small>' + ago(p.t) + '</small></div>' + (p.caption ? "<div class='cap'>" + esc(p.caption) + '</div>' : '') +
     "<div class='pb'><button data-like='" + esc(p.id) + "' class='" + (p.liked ? 'on' : '') + "'>" + (p.liked ? '❤️' : '🤍') + ' ' + (p.likes || 0) + "</button><button data-cmt='" + esc(p.id) + "'>💬 " + (p.comments || 0) + "</button><button class='mo' data-more='" + esc(p.id) + "' data-uid='" + esc(p.user_id || '') + "'>…</button></div><div class='cm' data-cbox='" + esc(p.id) + "' hidden></div></div></div>";
 }
 function openComments(id, box) {
@@ -529,10 +529,36 @@ function syncPull() { if (!window.FEED.pullProfile) return Promise.resolve(); re
 var syncT = null;
 function syncPush() { if (isGuest() || !window.FEED.pushProfile) return Promise.resolve(); var m = window.FEED_LOCAL && window.FEED_LOCAL.me ? window.FEED_LOCAL.me() : {}; return window.FEED.pushProfile({ name: m.name, avatar: m.avatar, data: syncData() }).catch(function () {}); }
 function syncSoon() { if (isGuest()) return; clearTimeout(syncT); syncT = setTimeout(syncPush, 3000); }
+function avHtml(p, big) { return p && p.avatar_url ? "<span class='av" + (big ? ' big' : '') + "'><img alt='' src='" + esc(p.avatar_url) + "'></span>" : "<span class='av" + (big ? ' big' : '') + "'>" + esc((p && p.avatar) || '🍙') + '</span>'; }
+var AVS = ['🍙', '🍳', '🥕', '🍅', '🧅', '🍓', '🥐', '🍮', '🐣', '🐱', '🐶', '🐻', '🍜', '🍰'];
+function openProfileEdit() {
+  var cur = window.FEED.myProfile(), img = null, imgUrl = null, emoji = cur.avatar || '🍙', remove = false;
+  var ov = document.createElement('div'); ov.className = 'ov'; ov.id = 'profOv';
+  function html() {
+    var show = imgUrl ? { avatar_url: imgUrl } : remove ? { avatar: emoji } : { avatar: emoji, avatar_url: cur.avatar_url };
+    return "<div class='sheet pf'><h2>✏️ プロフィールを編集</h2><div class='pfa'>" + avHtml(show, true) + "<button class='mini' id='pfp'>📷 写真をえらぶ</button>" + ((imgUrl || (cur.avatar_url && !remove)) ? "<button class='mini' id='pfr'>写真をはずす</button>" : '') + "</div>" +
+      "<div class='pfe'>" + AVS.map(function (a) { return "<button data-av='" + a + "' class='" + (a === emoji && !imgUrl && (remove || !cur.avatar_url) ? 'on' : '') + "'>" + a + '</button>'; }).join('') + "</div><small class='note'>写真がないときは、えらんだ絵文字がアイコンになるよ</small>" +
+      "<label class='pfl'>名前（1〜20文字）<input id='pfn' maxlength='20' value='" + esc(cur.name || '') + "'></label><p class='note'>名前とアイコンは、みんなのごはんに表示されるよ。本名や顔がわかる写真はやめてね。</p><button class='big' id='pfs'>保存する</button><button class='sub2' id='pfx'>やめる</button></div>";
+  }
+  function bind() {
+    $('pfx').onclick = function () { ov.remove(); };
+    $('pfp').onclick = function () { var c = $('camA'); c.value = ''; c.onchange = function () { var f = c.files && c.files[0]; if (!f) return; var u = URL.createObjectURL(f), im = new Image(); im.onload = function () { URL.revokeObjectURL(u); var s2 = Math.min(im.naturalWidth, im.naturalHeight), cv = document.createElement('canvas'); cv.width = cv.height = 320; cv.getContext('2d').drawImage(im, (im.naturalWidth - s2) / 2, (im.naturalHeight - s2) / 2, s2, s2, 0, 0, 320, 320); imgUrl = cv.toDataURL('image/jpeg', .85); cv.toBlob(function (bl) { img = bl; ov.innerHTML = html(); bind(); }, 'image/jpeg', .85); }; im.src = u; }; c.click(); };
+    var rm = $('pfr'); if (rm) rm.onclick = function () { img = null; imgUrl = null; remove = true; ov.innerHTML = html(); bind(); };
+    ov.querySelectorAll('[data-av]').forEach(function (b) { b.onclick = function () { emoji = b.getAttribute('data-av'); if (!imgUrl) remove = true; img = null; imgUrl = null; ov.innerHTML = html(); bind(); }; });
+    $('pfs').onclick = function () {
+      var n = $('pfn').value.trim(); if (!n) { toast('名前を入れてね'); return; }
+      var b = $('pfs'); b.disabled = true; b.textContent = '保存中…';
+      window.FEED.saveProfile({ name: n, avatar: emoji, image: img, removePhoto: remove && !img }).then(function () { ov.remove(); toast('プロフィールを保存したよ'); render(); }).catch(function (e) { b.disabled = false; b.textContent = '保存する'; toast(e && e.message ? e.message : '保存できなかった'); });
+    };
+  }
+  ov.innerHTML = html(); document.body.appendChild(ov); bind();
+  ov.addEventListener('click', function (e) { if (e.target === ov) ov.remove(); });
+}
 function accountHtml() {
   if (!window.FEED.cloud) return '';
   if (isGuest()) return "<div class='card'><div class='ct'>👤 アカウント</div><p class='note'>いまはゲストで使っているよ。ログインすると、写真の投稿・いいね・コメントができて、バッジやごはん日記が機種変しても消えなくなるよ。</p><button class='big' data-act='login'>🔑 ログイン（メールの番号だけ）</button></div>";
-  return "<div class='card'><div class='ct'>👤 アカウント</div><p class='note'>ログイン中：<b>" + esc(window.FEED.email() || '') + "</b><br>バッジ・ごはん日記・お気に入りはアカウントに保存されているよ。</p><button class='mini' data-act='logout'>ログアウト</button> <button class='mini' data-act='delacc' style='color:#E04848'>アカウントを削除</button></div>";
+  var pr = window.FEED.myProfile ? window.FEED.myProfile() : {};
+  return "<div class='card'><div class='ct'>👤 アカウント</div><div class='pfrow'>" + avHtml(pr, true) + "<div><b>" + esc(pr.name || '') + "</b><button class='mini' data-act='prof'>✏️ プロフィールを編集</button></div></div><p class='note'>ログイン中：<b>" + esc(window.FEED.email() || '') + "</b><br>バッジ・ごはん日記・お気に入りはアカウントに保存されているよ。</p><button class='mini' data-act='logout'>ログアウト</button> <button class='mini' data-act='delacc' style='color:#E04848'>アカウントを削除</button></div>";
 }
 function openPost(r) {
   if (isGuest()) { openLogin(function () { openPost(r); }, '写真を投稿するには、ログインが必要だよ'); return; }
@@ -567,6 +593,7 @@ $('cam').addEventListener('change', function (e) {
 });
 
 checkBadges(true);
+try { if (window.FEED.whenReady) window.FEED.whenReady.then(function () { if (!isGuest()) syncPull().then(function () { if (st.tab === 'me' || st.tab === 'feed') render(); }); }); } catch (e) {}
 // ---- タップの受け付け ----
 document.addEventListener('click', function (e) {
   var t = e.target, b;
@@ -594,6 +621,7 @@ document.addEventListener('click', function (e) {
     var a = b.getAttribute('data-act');
     if (a === 'spin') openSpin();
     else if (a === 'week') openWeek();
+    else if (a === 'prof') { openProfileEdit(); }
     else if (a === 'login') { openLogin(null, 'ログインすると、投稿・いいね・コメントができるよ'); }
     else if (a === 'logout') { if (confirm('ログアウトする？（記録はアカウントに残るよ）')) { syncPush().then(function () { return window.FEED.logout(); }).then(function () { toast('ログアウトしたよ'); render(); }); } }
     else if (a === 'delacc') { if (confirm('アカウントを削除する？投稿した写真・コメント・いいね・保存した記録が全部消えて、元に戻せないよ。') && confirm('本当に削除していい？')) { window.FEED.deleteAccount().then(function () { ['kd-posts', 'kd-stat', 'kd-likes-recv', 'kd-cmt-recv', 'kd-badges', 'kd-agree'].forEach(function (k) { try { localStorage.removeItem(k); } catch (er) {} }); toast('アカウントを削除したよ'); render(); }).catch(function (er) { toast(er.message); }); } }

@@ -94,6 +94,12 @@ body:has(#tmBar:not([hidden])) .sheet.ck{padding-top:calc(env(safe-area-inset-to
 .lg input{width:100%;box-sizing:border-box;border:2px solid var(--line);border-radius:14px;padding:12px;font:inherit;font-size:17px;margin:8px 0;background:#fff}
 .lgb{background:#FFF3D6;border-radius:14px;padding:10px 12px;font-size:13px;line-height:1.7;margin:8px 0}
 .lg .note a{color:#E0552A;font-weight:800}
+.av img{width:100%;height:100%;object-fit:cover;border-radius:50%;display:block}
+.av.big{width:64px!important;height:64px!important;font-size:34px!important;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;background:#FFF0E2;overflow:hidden;flex:none}
+.pfrow{display:flex;gap:12px;align-items:center;margin-bottom:8px}.pfrow b{display:block;font-size:17px;margin-bottom:4px}
+.pfa{display:flex;flex-direction:column;align-items:center;gap:8px;margin:6px 0 10px}.pfa .av.big{width:96px!important;height:96px!important;font-size:52px!important}
+.pfe{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}.pfe button{width:42px;height:42px;border-radius:50%;border:2px solid var(--line);background:#fff;font-size:22px}.pfe button.on{border-color:#FF7F50;background:#FFF0E6}
+.pfl{display:block;font-weight:800;font-size:13px;margin-top:12px}.pfl input{width:100%;box-sizing:border-box;border:2px solid var(--line);border-radius:14px;padding:12px;font:inherit;font-size:17px;margin-top:4px;background:#fff}
 .perk{background:#FFF3D6;border-radius:14px;padding:10px 12px;margin:10px 0;display:flex;flex-direction:column;gap:3px;font-size:13px}.perk b{font-size:14px;margin-bottom:2px}
 .rank{background:linear-gradient(135deg,#FFF0E2,#FFE3EC);border-radius:16px;padding:12px;margin-bottom:10px}
 .rk1{display:flex;align-items:center;gap:10px}.rki{font-size:34px}.rk1>div{flex:1}.rk1 small{display:block;font-size:11px;color:var(--sub)}.rk1 b{font-size:18px}
@@ -258,6 +264,7 @@ textarea.tx{width:100%;border:2px solid var(--line);border-radius:16px;padding:1
  <button data-tab="me"><i>📒</i>マイページ</button>
 </div></nav>
 <input type="file" id="cam" accept="image/*" hidden>
+<input type="file" accept="image/*" id="camA" hidden>
 <script src="config.js"></script>
 <script src="recipes2.js"></script>
 <script src="recipes3.js"></script>
