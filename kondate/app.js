@@ -25,7 +25,7 @@ var st = {
   week: get(K.week, null),              // 1週間の献立 {t, ids[]}
   flt: get(K.flt, { cat: 'all', min: 0, genre: 'all' })
 };
-function saveAll() { st.must = st.must.filter(function (m) { return st.picked.indexOf(m) >= 0; }); put(K.must, st.must); put(K.picked, st.picked); put(K.fav, st.fav); put(K.made, st.made); put(K.shop, st.shop); put(K.srv, st.srv); put(K.week, st.week); put(K.flt, st.flt); shopBadge(); }
+function saveAll() { syncSoon(); st.must = st.must.filter(function (m) { return st.picked.indexOf(m) >= 0; }); put(K.must, st.must); put(K.picked, st.picked); put(K.fav, st.fav); put(K.made, st.made); put(K.shop, st.shop); put(K.srv, st.srv); put(K.week, st.week); put(K.flt, st.flt); shopBadge(); }
 
 // ---- 候補のレシピ: 選んだ食材を1つ以上使うもの（たくさん使うほど上）。何も選んでなければ全部 ----
 function passFilter(r) {
@@ -215,7 +215,7 @@ function streakOf(ps) { var days = {}; ps.forEach(function (p) { days[dkey(p.t)]
   var today = new Date(); today.setHours(0, 0, 0, 0); var last = keys[keys.length - 1]; now = last != null && today.getTime() - last < 864e5 * 1.5 ? cur : 0; return { best: best, now: now }; }
 // アプリの中の行動の回数（いいねした数・コメントした数・ルーレット回数…）
 function stat() { return get('kd-stat', {}); }
-function bump(k, n) { var x = stat(); x[k] = (x[k] || 0) + (n == null ? 1 : n); put('kd-stat', x); setTimeout(checkBadges, 50); }
+function bump(k, n) { var x = stat(); x[k] = (x[k] || 0) + (n == null ? 1 : n); put('kd-stat', x); setTimeout(checkBadges, 50); syncSoon(); }
 function flag(k) { var x = stat(); if (!x[k]) { x[k] = 1; put('kd-stat', x); setTimeout(checkBadges, 50); } }
 // バッジ: [キー, 名前, 絵, 今の数, 目標, 取り方, グループ]
 function badgesOf(ps) {
@@ -440,6 +440,7 @@ function meHtml() {
   var recent = []; st.made.forEach(function (x) { if (recent.length < 10 && byId[x.id]) recent.push(x); });
   h += "<div class='card'><div class='ct'>🍽 最近作ったもの</div>" + (recent.length ? recent.map(function (x) { return recRow(byId[x.id], md(x.t)); }).join('') : "<p class='note'>「作った」を押すと記録されるよ</p>") + '</div>';
   h += "<div class='card'><div class='ct'>📚 ぜんぶのレシピ<span class='rt'>" + RECIPES.length + "品</span></div><input id='recQ' class='addrow' style='width:100%;border:2px solid var(--line);border-radius:14px;padding:10px 12px;font-size:16px' placeholder='レシピ名や食材で探す'><div id='recL'>" + RECIPES.slice(0, 8).map(function (r) { return recRow(r); }).join('') + '</div></div>';
+  h += accountHtml();
   h += "<div class='card'><div class='ct'>⚙️ その他</div><button class='mini' data-act='terms'>利用規約・プライバシー</button> <button class='mini' data-act='blocks'>ブロックした人</button></div>";
   return h;
 }
@@ -486,6 +487,7 @@ function moreMenu(id, uid) {
   ov.addEventListener('click', function (e) {
     if (e.target === ov) { ov.remove(); return; }
     var b = e.target.closest('[data-m]'); if (!b) return; var a = b.getAttribute('data-m'); ov.remove();
+    if (a === 'report' && isGuest()) { openLogin(null, '通報するには、ログインが必要だよ'); return; }
     if (a === 'report') { var why = prompt('通報の理由を書いてね（例: 食べ物と関係ない写真、いやがらせ など）'); if (why === null) return; window.FEED.report(id, why).then(function () { toast('通報したよ。運営が24時間以内に確認するね'); }); }
     else if (a === 'block') { if (!confirm('この人をブロックする？この人の投稿とコメントが見えなくなるよ')) return; window.FEED.block(uid).then(function () { toast('ブロックしたよ'); loadFeed(); }); }
     else if (a === 'del') { if (!confirm('この投稿を消す？')) return; window.FEED.remove(id).then(function () { toast('消したよ'); loadFeed(); }); }
@@ -494,7 +496,46 @@ function moreMenu(id, uid) {
 
 // ---- 投稿 ----
 var postFor = null, postImg = null, postThumb = null;
+// ---- ログイン（投稿・いいね・コメントのときだけ。メールに届く6桁の番号） ----
+function isGuest() { return !!(window.FEED.cloud && window.FEED.isGuest && window.FEED.isGuest()); }
+function needLogin(then, why) { if (!isGuest()) { then(); return; } openLogin(then, why); }
+function openLogin(then, why) {
+  var old = $('loginOv'); if (old) old.remove();
+  var ov = document.createElement('div'); ov.className = 'ov'; ov.id = 'loginOv'; var mode = null, mail = '';
+  function step1() { return "<div class='sheet lg'><h2>🔑 ログイン</h2><p class='note' style='text-align:center'>" + esc(why || '投稿・いいね・コメントをするには、ログインが必要だよ') + "</p><div class='lgb'><b>パスワードはいらないよ</b>メールアドレスに届く<b>6桁の番号</b>を入れるだけ。<br>ログインすると、バッジやごはん日記が機種変しても消えないよ。</div><input id='lgm' type='email' inputmode='email' autocomplete='email' placeholder='メールアドレス'><button class='big' id='lgs'>番号を送る</button><button class='sub2' id='lgx'>あとで</button><p class='note'>ログインすると<a href='#' data-act='terms'>利用規約</a>に同意したことになります。</p></div>"; }
+  function step2() { return "<div class='sheet lg'><h2>📩 番号を入れてね</h2><p class='note' style='text-align:center'>" + esc(mail) + " に6桁の番号を送ったよ。<br>届かないときは迷惑メールも見てね。</p><input id='lgc' inputmode='numeric' autocomplete='one-time-code' maxlength='6' placeholder='123456' style='text-align:center;font-size:28px;letter-spacing:8px'><button class='big' id='lgv'>ログイン</button><button class='sub2' id='lgb'>メールアドレスを入れ直す</button></div>"; }
+  function bind() {
+    var x = $('lgx'); if (x) x.onclick = function () { ov.remove(); };
+    var s1 = $('lgs'); if (s1) s1.onclick = function () { mail = $('lgm').value.trim(); s1.disabled = true; s1.textContent = '送信中…'; window.FEED.sendCode(mail).then(function (m) { mode = m; ov.innerHTML = step2(); bind(); var c = $('lgc'); if (c) c.focus(); }).catch(function (e) { s1.disabled = false; s1.textContent = '番号を送る'; toast(e.message); }); };
+    var bk = $('lgb'); if (bk) bk.onclick = function () { ov.innerHTML = step1(); bind(); };
+    var v = $('lgv'); if (v) v.onclick = function () { v.disabled = true; v.textContent = '確認中…'; window.FEED.verify(mail, $('lgc').value, mode).then(function () { return syncPull(); }).then(function () { ov.remove(); toast('ログインしたよ！🎉'); render(); if (then) then(); }).catch(function (e) { v.disabled = false; v.textContent = 'ログイン'; toast(e.message); }); };
+  }
+  ov.innerHTML = step1(); document.body.appendChild(ov); bind();
+  ov.addEventListener('click', function (e) { if (e.target === ov) ov.remove(); });
+}
+// ---- 記録をアカウントに保存（バッジ・ごはん日記・お気に入り・作った記録） ----
+var SYNC_KEYS = ['kd-posts', 'kd-stat', 'kd-likes-recv', 'kd-cmt-recv', 'kd-badges', 'kd-fav', 'kd-made', 'kd-agree'];
+function syncData() { var d = {}; SYNC_KEYS.forEach(function (k) { var v = get(k, null); if (k === 'kd-posts' && v) v = v.map(function (p) { return { id: p.id, t: p.t }; }); if (v !== null) d[k] = v; }); return d; }
+function mergeIn(d) {
+  if (!d) return;
+  var lp = get('kd-posts', []), seen = {}; lp.forEach(function (p) { seen[p.t] = 1; }); (d['kd-posts'] || []).forEach(function (p) { if (!seen[p.t]) lp.push(p); }); lp.sort(function (a, b) { return a.t - b.t; }); put('kd-posts', lp.slice(-300));
+  var s1 = get('kd-stat', {}), s2 = d['kd-stat'] || {}; Object.keys(s2).forEach(function (k) { s1[k] = Math.max(s1[k] || 0, s2[k] || 0); }); put('kd-stat', s1);
+  ['kd-likes-recv', 'kd-cmt-recv', 'kd-agree'].forEach(function (k) { put(k, Math.max(get(k, 0), d[k] || 0)); });
+  ['kd-badges', 'kd-fav'].forEach(function (k) { var a = get(k, []); (d[k] || []).forEach(function (x) { if (a.indexOf(x) < 0) a.push(x); }); put(k, a); });
+  var mm = get('kd-made', []), ms = {}; mm.forEach(function (x) { ms[x.t] = 1; }); (d['kd-made'] || []).forEach(function (x) { if (!ms[x.t]) mm.push(x); }); mm.sort(function (a, b) { return b.t - a.t; }); put('kd-made', mm.slice(0, 500));
+  st.fav = get('kd-fav', []); st.made = get('kd-made', []);
+}
+function syncPull() { if (!window.FEED.pullProfile) return Promise.resolve(); return window.FEED.pullProfile().then(function (p) { if (p && p.data) mergeIn(p.data); checkBadges(true); return syncPush(); }).catch(function () {}); }
+var syncT = null;
+function syncPush() { if (isGuest() || !window.FEED.pushProfile) return Promise.resolve(); var m = window.FEED_LOCAL && window.FEED_LOCAL.me ? window.FEED_LOCAL.me() : {}; return window.FEED.pushProfile({ name: m.name, avatar: m.avatar, data: syncData() }).catch(function () {}); }
+function syncSoon() { if (isGuest()) return; clearTimeout(syncT); syncT = setTimeout(syncPush, 3000); }
+function accountHtml() {
+  if (!window.FEED.cloud) return '';
+  if (isGuest()) return "<div class='card'><div class='ct'>👤 アカウント</div><p class='note'>いまはゲストで使っているよ。ログインすると、写真の投稿・いいね・コメントができて、バッジやごはん日記が機種変しても消えなくなるよ。</p><button class='big' data-act='login'>🔑 ログイン（メールの番号だけ）</button></div>";
+  return "<div class='card'><div class='ct'>👤 アカウント</div><p class='note'>ログイン中：<b>" + esc(window.FEED.email() || '') + "</b><br>バッジ・ごはん日記・お気に入りはアカウントに保存されているよ。</p><button class='mini' data-act='logout'>ログアウト</button> <button class='mini' data-act='delacc' style='color:#E04848'>アカウントを削除</button></div>";
+}
 function openPost(r) {
+  if (isGuest()) { openLogin(function () { openPost(r); }, '写真を投稿するには、ログインが必要だよ'); return; }
   postFor = r; postImg = null; postThumb = null;
   var ov = document.createElement('div'); ov.className = 'ov'; ov.id = 'postOv';
   ov.innerHTML = "<div class='sheet'><h2>📷 作ったごはんを投稿</h2><p class='note' style='text-align:center'>" + r.emoji + ' ' + esc(r.name) + "</p><button class='pv' id='pv'><i>📷</i>タップして写真をえらぶ</button><textarea class='tx' id='ptx' maxlength='200' placeholder='ひとこと（例: はじめて作ったけど大成功！）'></textarea>" +
@@ -542,6 +583,7 @@ document.addEventListener('click', function (e) {
   if ((b = t.closest('[data-fg]'))) { st.flt.genre = b.getAttribute('data-fg'); saveAll(); keep(); return; }
   if ((b = t.closest('[data-open]'))) { openRecipe(b.getAttribute('data-open')); return; }
   if ((b = t.closest('[data-fs]'))) { var v = b.getAttribute('data-fs'); if (v === 'all') feedRecipe = null; else feedSort = v; render(); return; }
+  if (t.closest('[data-like],[data-csend]') && isGuest()) { openLogin(null, 'いいね・コメントするには、ログインが必要だよ'); return; }
   if ((b = t.closest('[data-like]'))) { var id = b.getAttribute('data-like'), on = b.classList.contains('on'), nn = parseInt(b.textContent.replace(/\D/g, ''), 10) || 0; b.classList.toggle('on', !on); b.textContent = (on ? '🤍 ' : '❤️ ') + Math.max(0, nn + (on ? -1 : 1)); buzz(); if (!on) bump('likesGiven'); window.FEED.like(id, !on).catch(function () { toast('いいねできなかった'); }); return; }
   if ((b = t.closest('[data-cmt]'))) { var box = document.querySelector("[data-cbox='" + b.getAttribute('data-cmt') + "']"); if (box) openComments(b.getAttribute('data-cmt'), box); return; }
   if ((b = t.closest('[data-csend]'))) { var inp = b.parentNode.querySelector('input'), tx = inp.value.trim(), pid = b.getAttribute('data-csend'); if (!tx) return; b.disabled = true; window.FEED.comment(pid, tx).then(function () { bump('cmtGiven'); var bx = document.querySelector("[data-cbox='" + pid + "']"); bx.hidden = true; openComments(pid, bx); var cb = document.querySelector("[data-cmt='" + pid + "']"); if (cb) cb.textContent = '💬 ' + ((parseInt(cb.textContent.replace(/\D/g, ''), 10) || 0) + 1); }).catch(function (er) { b.disabled = false; toast(er && er.message ? er.message : '送れなかった'); }); return; }
@@ -552,6 +594,9 @@ document.addEventListener('click', function (e) {
     var a = b.getAttribute('data-act');
     if (a === 'spin') openSpin();
     else if (a === 'week') openWeek();
+    else if (a === 'login') { openLogin(null, 'ログインすると、投稿・いいね・コメントができるよ'); }
+    else if (a === 'logout') { if (confirm('ログアウトする？（記録はアカウントに残るよ）')) { syncPush().then(function () { return window.FEED.logout(); }).then(function () { toast('ログアウトしたよ'); render(); }); } }
+    else if (a === 'delacc') { if (confirm('アカウントを削除する？投稿した写真・コメント・いいね・保存した記録が全部消えて、元に戻せないよ。') && confirm('本当に削除していい？')) { window.FEED.deleteAccount().then(function () { ['kd-posts', 'kd-stat', 'kd-likes-recv', 'kd-cmt-recv', 'kd-badges', 'kd-agree'].forEach(function (k) { try { localStorage.removeItem(k); } catch (er) {} }); toast('アカウントを削除したよ'); render(); }).catch(function (er) { toast(er.message); }); } }
     else if (a === 'badgeAll') { badgeAll = !badgeAll; keep(); }
     else if (a === 'clear') { st.picked = []; st.must = []; saveAll(); render(); }
     else if (a === 'shopAdd') { var v2 = ($('shopIn').value || '').trim(); if (v2) { st.shop.unshift({ n: v2, from: ['自分で追加'], done: false }); saveAll(); render(); } }

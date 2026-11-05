@@ -4,13 +4,13 @@
 var cfg = window.KONDATE_CONFIG || {}, L = window.FEED_LOCAL;
 if (!cfg.url || !cfg.key || !window.supabase || !L) return;
 var sb = window.supabase.createClient(cfg.url, cfg.key, { auth: { persistSession: true, autoRefreshToken: true, storageKey: 'kd-auth' } });
-var uid = null;
+var uid = null, user = null;
 // 名前もメアドもいらない「ゲスト」としてサーバーに入る（端末ごとにIDができる）
 var ready = sb.auth.getSession().then(function (r) {
   var s = r.data && r.data.session;
   if (s) return s;
   return sb.auth.signInAnonymously().then(function (x) { if (x.error) throw x.error; return x.data.session; });
-}).then(function (s) { uid = s.user.id; return uid; });
+}).then(function (s) { user = s.user; uid = s.user.id; return uid; });
 ready.catch(function () {});
 function need() { return ready.catch(function () { throw new Error('サーバーにつながらなかった。通信を確認してね'); }); }
 function chk(r) { if (r.error) { var m = r.error.message || ''; throw new Error(/[ぁ-んァ-ン]/.test(m) ? m.replace(/^.*?ERROR:\s*/, '') : '通信がうまくいかなかった。もう一回ためしてね'); } return r.data; }
@@ -76,6 +76,36 @@ window.FEED = {
       return sb.from('posts').delete().eq('id', id).eq('user_id', uid);
     }).then(chk).then(function () { if (path) return sb.storage.from('photos').remove([path]); });
   },
-  me: function () { return uid; }
+  me: function () { return uid; },
+  // ---- ログイン（メールに届く6桁の番号） ----
+  isGuest: function () { return !user || !!user.is_anonymous || !user.email; },
+  email: function () { return user && user.email; },
+  sendCode: function (email) {
+    email = String(email || '').trim().toLowerCase();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return Promise.reject(new Error('メールアドレスを確認してね'));
+    function login() { return sb.auth.signInWithOtp({ email: email, options: { shouldCreateUser: true } }).then(function (x) { if (x.error) throw x.error; return 'login'; }); }
+    return need().then(function () {
+      // ゲストのまま投稿していた人は、同じアカウントにメールを付ける（投稿がそのまま引き継がれる）
+      if (user && user.is_anonymous) return sb.auth.updateUser({ email: email }).then(function (r) { if (!r.error) return 'upgrade'; if (/already|registered|exists|taken/i.test(r.error.message || '')) return login(); throw r.error; });
+      return login();
+    }).catch(function (e) { var m = (e && e.message) || ''; throw new Error(/rate|seconds|too many/i.test(m) ? '少し待ってから、もう一回送ってね' : 'メールを送れなかった。アドレスを確認してね'); });
+  },
+  verify: function (email, code, mode) {
+    email = String(email || '').trim().toLowerCase(); code = String(code || '').replace(/\D/g, '');
+    return sb.auth.verifyOtp({ email: email, token: code, type: mode === 'upgrade' ? 'email_change' : 'email' }).then(function (r) {
+      if (r.error) throw new Error('番号がちがうか、時間切れだよ。もう一回送ってね');
+      user = (r.data && (r.data.user || (r.data.session && r.data.session.user))) || user; uid = user.id; return user;
+    });
+  },
+  logout: function () { return sb.auth.signOut().then(function () { return sb.auth.signInAnonymously(); }).then(function (x) { if (x.data && x.data.user) { user = x.data.user; uid = user.id; } }); },
+  deleteAccount: function () {
+    return need().then(function () { return sb.from('posts').select('photo_path').eq('user_id', uid); }).then(function (r) {
+      var paths = (r.data || []).map(function (p) { return p.photo_path; }).filter(Boolean);
+      return paths.length ? sb.storage.from('photos').remove(paths) : null;
+    }).then(function () { return sb.rpc('delete_me'); }).then(function (r) { if (r.error) throw new Error('削除できなかった。通信を確認してね'); return sb.auth.signOut(); })
+      .then(function () { return sb.auth.signInAnonymously(); }).then(function (x) { if (x.data && x.data.user) { user = x.data.user; uid = user.id; } });
+  },
+  pullProfile: function () { if (this.isGuest()) return Promise.resolve(null); return sb.from('profiles').select('name,avatar,data').eq('user_id', uid).maybeSingle().then(function (r) { return r.data || null; }); },
+  pushProfile: function (p) { if (this.isGuest()) return Promise.resolve(); return sb.from('profiles').upsert({ user_id: uid, name: p.name || '', avatar: p.avatar || '🍙', data: p.data || {}, updated_at: new Date().toISOString() }).then(function () {}); }
 };
 })();
