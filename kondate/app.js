@@ -423,8 +423,9 @@ function shopHtml() {
 
 // ---- マイページ ----
 function meHtml() {
-  var h = header('マイページ', 'お気に入りと、作ったごはんの記録');
+  var h = '';
   var ps = myPosts(), bd = badgesOf(ps);
+  h += profileHead(ps, bd);
   h += "<div class='card'><div class='ct'>📔 ごはん日記<span class='rt'>" + ps.length + '枚</span></div>' + rankHtml(ps) +
     badgeHtml(bd) +
     (ps.length ? "<div class='diary'>" + ps.slice().reverse().slice(0, 30).map(function (p) { var r = byId[p.id]; return "<button data-open='" + p.id + "'>" + (p.th ? "<img alt='' src='" + p.th + "'>" : '<i>' + (r ? r.emoji : '🍽') + '</i>') + '<small>' + md(p.t) + '</small></button>'; }).join('') + '</div>' : "<p class='note'>作ったごはんの写真を投稿すると、ここに並んでいくよ</p>") + '</div>';
@@ -536,7 +537,7 @@ function openProfileEdit() {
   var ov = document.createElement('div'); ov.className = 'ov'; ov.id = 'profOv';
   function html() {
     var show = imgUrl ? { avatar_url: imgUrl } : remove ? { avatar: emoji } : { avatar: emoji, avatar_url: cur.avatar_url };
-    return "<div class='sheet pf'><h2>✏️ プロフィールを編集</h2><div class='pfa'>" + avHtml(show, true) + "<button class='mini' id='pfp'>📷 写真をえらぶ</button>" + ((imgUrl || (cur.avatar_url && !remove)) ? "<button class='mini' id='pfr'>写真をはずす</button>" : '') + "</div>" +
+    return "<div class='sheet pf'><h2>✏️ プロフィールを編集</h2><div class='pfa'>" + pavHtml(show, 'xl') + "<button class='mini' id='pfp'>📷 写真をえらぶ</button>" + ((imgUrl || (cur.avatar_url && !remove)) ? "<button class='mini' id='pfr'>写真をはずす</button>" : '') + "</div>" +
       "<div class='pfe'>" + AVS.map(function (a) { return "<button data-av='" + a + "' class='" + (a === emoji && !imgUrl && (remove || !cur.avatar_url) ? 'on' : '') + "'>" + a + '</button>'; }).join('') + "</div><small class='note'>写真がないときは、えらんだ絵文字がアイコンになるよ</small>" +
       "<label class='pfl'>名前（1〜20文字）<input id='pfn' maxlength='20' value='" + esc(cur.name || '') + "'></label><p class='note'>名前とアイコンは、みんなのごはんに表示されるよ。本名や顔がわかる写真はやめてね。</p><button class='big' id='pfs'>保存する</button><button class='sub2' id='pfx'>やめる</button></div>";
   }
@@ -554,11 +555,21 @@ function openProfileEdit() {
   ov.innerHTML = html(); document.body.appendChild(ov); bind();
   ov.addEventListener('click', function (e) { if (e.target === ov) ov.remove(); });
 }
+function pavHtml(p, cls) { return "<div class='pav " + (cls || '') + "'>" + (p && p.avatar_url ? "<img alt='' src='" + esc(p.avatar_url) + "'>" : '<span>' + esc((p && p.avatar) || '🍙') + '</span>') + '</div>'; }
+// マイページのいちばん上（インスタのプロフィールみたいに）
+function profileHead(ps, bd) {
+  var guest = isGuest(), pr = window.FEED.myProfile && !guest ? window.FEED.myProfile() : (window.FEED_LOCAL ? window.FEED_LOCAL.me() : {});
+  var k = rankOf(ps.length), got = bd.filter(function (b) { return b[3]; }).length;
+  var h = "<div class='phd'><div class='phr'>" + pavHtml(guest ? { avatar: '👤' } : pr, 'xl') + "<div class='phs'><div><b>" + ps.length + '</b><small>投稿</small></div><div><b>' + get('kd-likes-recv', 0) + '</b><small>いいね</small></div><div><b>' + got + '</b><small>バッジ</small></div></div></div>';
+  h += "<div class='phn'>" + (guest ? 'ゲスト' : esc(pr.name || '')) + "</div><div class='phk'>" + k.r[2] + ' ' + k.r[1] + (streakOf(ps).now ? '　🔥 ' + streakOf(ps).now + '日連続' : '') + '</div>';
+  h += guest ? "<button class='phb on' data-act='login'>🔑 ログインして投稿をはじめる</button>" : "<button class='phb' data-act='prof'>プロフィールを編集</button>";
+  return h + '</div>';
+}
 function accountHtml() {
   if (!window.FEED.cloud) return '';
   if (isGuest()) return "<div class='card'><div class='ct'>👤 アカウント</div><p class='note'>いまはゲストで使っているよ。ログインすると、写真の投稿・いいね・コメントができて、バッジやごはん日記が機種変しても消えなくなるよ。</p><button class='big' data-act='login'>🔑 ログイン（メールの番号だけ）</button></div>";
   var pr = window.FEED.myProfile ? window.FEED.myProfile() : {};
-  return "<div class='card'><div class='ct'>👤 アカウント</div><div class='pfrow'>" + avHtml(pr, true) + "<div><b>" + esc(pr.name || '') + "</b><button class='mini' data-act='prof'>✏️ プロフィールを編集</button></div></div><p class='note'>ログイン中：<b>" + esc(window.FEED.email() || '') + "</b><br>バッジ・ごはん日記・お気に入りはアカウントに保存されているよ。</p><button class='mini' data-act='logout'>ログアウト</button> <button class='mini' data-act='delacc' style='color:#E04848'>アカウントを削除</button></div>";
+  return "<div class='card'><div class='ct'>👤 アカウント</div><p class='note'>ログイン中：<b>" + esc(window.FEED.email() || '') + "</b><br>バッジ・ごはん日記・お気に入りはアカウントに保存されているよ。</p><button class='mini' data-act='logout'>ログアウト</button> <button class='mini' data-act='delacc' style='color:#E04848'>アカウントを削除</button></div>";
 }
 function openPost(r) {
   if (isGuest()) { openLogin(function () { openPost(r); }, '写真を投稿するには、ログインが必要だよ'); return; }
