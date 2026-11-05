@@ -114,7 +114,7 @@ var TIP = {
   steam: ['ふたをして蒸し焼きにするときは、水を少し入れると焦げずにふっくら仕上がる。', 'レンジで加熱するときは、ラップをふんわりかけて、取り出すときの蒸気に注意。']
 };
 function kindOf(r) {
-  var n = r.name, s = r.steps.join('');
+  var n = r.name.replace(/フライパン/g, 'パン'), s = r.steps.join('').replace(/フライパン/g, 'パン');
   if (r.cat === 'デザート') return /焼|オーブン|トースター/.test(s) ? ['bake', 'dessert'] : ['dessert'];
   if (/鍋(?!肉)|ポトフ|チゲ/.test(n)) return ['nabe', 'soup'];
   if (r.cat === '汁物') return ['soup'];
@@ -230,7 +230,7 @@ window.recipeDetail = function (r) {
   var steps = r.steps.slice();
   // 最初に「調味料を合わせておく」手順を足す（炒め物・焼き物・丼などで調味料が3つ以上のとき）
   var seas = r.ing.filter(function (i) { return i.pantry && !/^(水|油|ごま油|オリーブオイル|塩|こしょう|塩こしょう|片栗粉|小麦粉|パン粉|白ごま|かつお節|刻みのり|にんにく|生姜|バター|米)$/.test(i.n) && !/少々|適量/.test(i.q); });
-  if (seas.length >= 3 && /stir|grill|don|rice|fry/.test(kinds.join()) && !/混ぜておく|合わせ/.test(steps.join(''))) steps.unshift('【先に準備】' + seas.map(function (i) { return i.n; }).join('・') + 'を小さな器に入れて、よく混ぜておく（炒めながら計ると焦げるので、先に用意しておくのがコツ）。');
+  if (seas.length >= 3 && /stir|grill|don|rice|fry/.test(kinds.join()) && !/混ぜておく|合わせ/.test(steps.join('')) && !steps.some(function (t) { return /混ぜ/.test(t) && seas.filter(function (i) { return t.indexOf(i.n) >= 0; }).length >= 2; })) steps.unshift('【先に準備】' + seas.map(function (i) { return i.n; }).join('・') + 'を小さな器に入れて、よく混ぜておく（炒めながら計ると焦げるので、先に用意しておくのがコツ）。');
   // 最後に味見・仕上げの手順を足す
   if (/soup|simmer|nabe/.test(kinds.join()) && !/味見/.test(steps.join(''))) steps.push('味見をして、薄ければ醤油か塩をほんの少し、濃ければ水を少し足して調整する。熱いうちに器に盛る。');
   else if (/stir|grill/.test(kinds.join()) && !/盛/.test(steps[steps.length - 1])) steps.push('火を止めて、フライパンに残ったたれもかけて器に盛る。');

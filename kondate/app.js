@@ -498,12 +498,13 @@ function openPost(r) {
   postFor = r; postImg = null; postThumb = null;
   var ov = document.createElement('div'); ov.className = 'ov'; ov.id = 'postOv';
   ov.innerHTML = "<div class='sheet'><h2>📷 作ったごはんを投稿</h2><p class='note' style='text-align:center'>" + r.emoji + ' ' + esc(r.name) + "</p><button class='pv' id='pv'><i>📷</i>タップして写真をえらぶ</button><textarea class='tx' id='ptx' maxlength='200' placeholder='ひとこと（例: はじめて作ったけど大成功！）'></textarea>" +
-    "<div class='perk'><b>📷 投稿するともらえるもの</b><span>🏅 ごはんランクが上がる</span><span>🔥 連続投稿の記録</span><span>🎖 バッジ（和食名人・デザート職人…）</span><span>👑 いいね1位で、このレシピの「顔」に</span><span>📔 マイページのごはん日記に残る</span></div><p class='note'>投稿すると、このアプリを使っている全員が見られるよ。顔や住所がわかる写真はやめてね。食べ物と関係ない写真・いやがらせは削除されるよ。</p><button class='big' id='pgo'>投稿する</button><button class='sub2' id='pno' style='border-color:var(--line);color:var(--sub)'>やめる</button></div>";
+    "<div class='perk'><b>📷 投稿するともらえるもの</b><span>🏅 ごはんランクが上がる</span><span>🔥 連続投稿の記録</span><span>🎖 バッジ（和食名人・デザート職人…）</span><span>👑 いいね1位で、このレシピの「顔」に</span><span>📔 マイページのごはん日記に残る</span></div>" + (get('kd-agree', 0) ? '' : "<label class='agree'><input type='checkbox' id='pagr'> <span><a href='#' data-act='terms'>利用規約</a>に同意して投稿する（人を傷つける投稿・料理と関係ない写真は禁止。違反した投稿は削除されます）</span></label>") + "<p class='note'>投稿すると、このアプリを使っている全員が見られるよ。顔や住所がわかる写真はやめてね。食べ物と関係ない写真・いやがらせは削除されるよ。</p><button class='big' id='pgo'>投稿する</button><button class='sub2' id='pno' style='border-color:var(--line);color:var(--sub)'>やめる</button></div>";
   document.body.appendChild(ov);
   $('pv').onclick = function () { var c = $('cam'); c.value = ''; c.click(); };
   $('pno').onclick = function () { ov.remove(); };
   $('pgo').onclick = function () {
     if (!postImg) { toast('写真をえらんでね'); return; }
+    var ag = $('pagr'); if (ag && !ag.checked) { toast('利用規約への同意にチェックしてね'); return; } if (ag) put('kd-agree', 1);
     var b = $('pgo'); b.disabled = true; b.textContent = '投稿中…';
     window.FEED.post({ recipe_id: r.id, caption: $('ptx').value.trim(), image: postImg }).then(function () {
       var before = myPosts(), ps = before.concat([{ id: r.id, t: Date.now(), th: postThumb }]).slice(-120); put('kd-posts', ps);
