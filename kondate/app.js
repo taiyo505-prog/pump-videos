@@ -207,6 +207,82 @@ function annot(text, r) {
   t = esc(t);
   return t.replace(/\u0001(\d+)\u0002/g, function (m, n) { return marks[+n]; });
 }
+// ---- 投稿の特典（ランク・バッジ・連続投稿・ごはん日記） ----
+var RANKS = [[0, '見習いさん', '🥚'], [1, 'はじめの一皿', '🍳'], [3, 'ごはん係', '🥄'], [7, '台所の星', '⭐'], [15, 'おうちシェフ', '👩‍🍳'], [30, 'くるくるマスター', '👑'], [60, '伝説のごはん屋', '🏆']];
+function myPosts() { return get('kd-posts', []); }
+function streakOf(ps) { var days = {}; ps.forEach(function (p) { days[dkey(p.t)] = 1; }); var best = 0, cur = 0, now = 0; var keys = Object.keys(days).map(function (k) { var a = k.split('-'); return new Date(+a[0], +a[1] - 1, +a[2]).getTime(); }).sort(function (a, b) { return a - b; });
+  keys.forEach(function (d, i) { cur = i && d - keys[i - 1] < 864e5 * 1.5 ? cur + 1 : 1; if (cur > best) best = cur; });
+  var today = new Date(); today.setHours(0, 0, 0, 0); var last = keys[keys.length - 1]; now = last != null && today.getTime() - last < 864e5 * 1.5 ? cur : 0; return { best: best, now: now }; }
+function badgesOf(ps) {
+  var g = {}, cats = {}, ids = {}; ps.forEach(function (p) { var r = byId[p.id]; if (!r) return; g[r.genre] = (g[r.genre] || 0) + 1; cats[r.cat] = (cats[r.cat] || 0) + 1; ids[p.id] = 1; });
+  var s2 = streakOf(ps), n = ps.length, likes = get('kd-likes-recv', 0);
+  return [['first', 'はじめての投稿', '📷', n >= 1, '1回投稿する'], ['s3', '3日連続', '🔥', s2.best >= 3, '3日続けて投稿'], ['s7', '1週間連続', '☄️', s2.best >= 7, '7日続けて投稿'],
+    ['p10', '10皿達成', '🍽', n >= 10, '10回投稿'], ['p30', '30皿達成', '🏅', n >= 30, '30回投稿'], ['var', 'レパートリー10', '🎨', Object.keys(ids).length >= 10, '10種類のレシピを投稿'],
+    ['wa', '和食名人', '🍙', (g['和'] || 0) >= 5, '和食を5回'], ['yo', '洋食名人', '🍝', (g['洋'] || 0) >= 5, '洋食を5回'], ['chu', '中華名人', '🥟', (g['中'] || 0) >= 5, '中華を5回'],
+    ['kan', '韓国名人', '🌶️', (g['韓'] || 0) >= 3, '韓国料理を3回'], ['eth', 'エスニック名人', '🌮', (g['エスニック'] || 0) >= 3, 'エスニックを3回'], ['sw', 'デザート職人', '🍰', (cats['デザート'] || 0) >= 3, 'デザートを3回'],
+    ['l10', 'いいね10こ', '❤️', likes >= 10, 'いいねを合計10こもらう'], ['l50', '人気者', '💖', likes >= 50, 'いいねを合計50こもらう']];
+}
+function rankOf(n) { var r = RANKS[0], nx = null; RANKS.forEach(function (x, i) { if (n >= x[0]) { r = x; nx = RANKS[i + 1] || null; } }); return { r: r, next: nx }; }
+function rankHtml(ps) { var n = ps.length, k = rankOf(n), s2 = streakOf(ps), pct = k.next ? Math.max(5, Math.round((n - k.r[0]) / (k.next[0] - k.r[0]) * 100)) : 100;
+  return "<div class='rank'><div class='rk1'><span class='rki'>" + k.r[2] + "</span><div><small>ごはんランク</small><b>" + k.r[1] + "</b></div><div class='rks'>🔥<b>" + s2.now + '</b><small>日連続</small></div></div><div class=\'rkbar\'><i style=\'width:' + pct + "%'></i></div><small class='rkn'>" + (k.next ? 'あと' + (k.next[0] - n) + '回投稿で「' + k.next[2] + ' ' + k.next[1] + '」' : '最高ランク達成！') + '</small></div>'; }
+// 投稿のあとの「ごほうび」画面
+function rewardAfterPost(r, before, thumb) {
+  var ps = myPosts(), n = ps.length, kb = rankOf(before.length), ka = rankOf(n), bb = badgesOf(before), ba = badgesOf(ps), nb = ba.filter(function (b, i) { return b[3] && !bb[i][3]; });
+  var ov = document.createElement('div'); ov.className = 'ov'; ov.id = 'rwOv';
+  var h = "<div class='sheet rw'><h2>🎉 投稿ありがとう！</h2>" + (thumb ? "<img class='rwimg' alt='' src='" + thumb + "'>" : '');
+  if (ka.r[0] !== kb.r[0]) h += "<div class='rwup'><small>ランクアップ！</small><b>" + ka.r[2] + ' ' + ka.r[1] + '</b></div>';
+  if (nb.length) h += "<div class='rwb'><small>新しいバッジをゲット</small>" + nb.map(function (b) { return "<span><i>" + b[2] + '</i>' + b[1] + '</span>'; }).join('') + '</div>';
+  h += rankHtml(ps) + "<p class='note' style='text-align:center'>👑 いいねがいちばん多い写真は、「" + esc(r.name) + "」のレシピの顔になって、みんなのレシピ画面に表示されるよ</p><button class='big' data-rw='feed'>みんなのごはんを見る</button><button class='sub2' data-rw='me'>📔 ごはん日記を見る</button></div>";
+  ov.innerHTML = h; document.body.appendChild(ov); confetti();
+  ov.addEventListener('click', function (e) { var b = e.target.closest('[data-rw]'); if (e.target === ov || b) { ov.remove(); if (b) { st.tab = b.getAttribute('data-rw'); render(); } } });
+}
+// ---- 作り方の1ステップ（イラスト・火加減・量・タイマー・ヒント） ----
+function stepHtml(s, k, r, big) {
+  var sec = window.stepTime ? window.stepTime(s.t) : 0;
+  return "<li class='" + (big ? 'big1' : '') + "'><div class='sill'>" + (window.stepSVG ? window.stepSVG(s.t, r, s.heat, k) : '') + "</div><div class='stx'>" + (s.heat ? "<span class='heat'>🔥 " + esc(s.heat) + '</span>' : '') + (s.noq ? esc(s.t) : annot(s.t, r)) +
+    (sec ? "<button class='tmb' data-tm='" + sec + "' data-tl='" + esc((k + 1) + '. ' + r.name) + "'>⏱ " + fmtT(sec) + ' タイマー</button>' : '') +
+    (s.hint.length ? "<div class='hint2'>" + s.hint.map(function (x) { return '💡 ' + esc(x); }).join('<br>') + '</div>' : '') + '</div></li>';
+}
+function fmtT(sec) { var m = Math.floor(sec / 60), s2 = sec % 60; return m ? m + '分' + (s2 ? s2 + '秒' : '') : s2 + '秒'; }
+// ---- キッチンタイマー（複数OK・画面上に出る） ----
+var timers = [];
+function startTimer(sec, label) { timers.push({ end: Date.now() + sec * 1000, label: label, id: Math.random() }); toast('⏱ ' + fmtT(sec) + ' のタイマーをスタート'); buzz(); tickTimers(); }
+function beep() { try { var A = window.AudioContext || window.webkitAudioContext; if (!A) return; if (!actx) actx = new A(); [0, .35, .7].forEach(function (d) { var o = actx.createOscillator(), g = actx.createGain(); o.frequency.value = 880; g.gain.setValueAtTime(.25, actx.currentTime + d); g.gain.exponentialRampToValueAtTime(.001, actx.currentTime + d + .3); o.connect(g); g.connect(actx.destination); o.start(actx.currentTime + d); o.stop(actx.currentTime + d + .32); }); } catch (e) {} }
+var tmLoop = null;
+function tickTimers() {
+  var bar = $('tmBar'); if (!bar) { bar = document.createElement('div'); bar.id = 'tmBar'; document.body.appendChild(bar); }
+  var now = Date.now(), done = timers.filter(function (x) { return x.end <= now; });
+  done.forEach(function (x) { beep(); try { var H = window.Capacitor && Capacitor.Plugins && Capacitor.Plugins.Haptics; if (H) H.vibrate(); } catch (e) {} toast('⏰ 時間だよ！（' + x.label + '）'); });
+  timers = timers.filter(function (x) { return x.end > now; });
+  bar.innerHTML = timers.map(function (x) { var r = Math.ceil((x.end - now) / 1000); return "<button data-tmx='" + x.id + "'>⏱ " + Math.floor(r / 60) + ':' + ('0' + r % 60).slice(-2) + ' <small>' + esc(x.label) + '</small> ✕</button>'; }).join('');
+  bar.hidden = !timers.length;
+  clearTimeout(tmLoop); if (timers.length) tmLoop = setTimeout(tickTimers, 500);
+}
+// ---- 調理モード（1ステップずつ大きく・画面を消さない） ----
+var wakeLock = null;
+function keepOn(on) { try { if (on && navigator.wakeLock) navigator.wakeLock.request('screen').then(function (w) { wakeLock = w; }).catch(function () {}); else if (!on && wakeLock) { wakeLock.release(); wakeLock = null; } } catch (e) {} }
+function openCook(r) {
+  var dt = window.recipeDetail(r), idx = 0, ov = document.createElement('div'); ov.className = 'ov cook'; ov.id = 'cookOv';
+  function html() {
+    var n = dt.steps.length, h = "<div class='sheet ck'><div class='ckh'><button data-c='x'>✕ とじる</button><b>" + esc(r.name) + '</b><span>' + st.srv + '人分</span></div>';
+    h += "<div class='ckp'>" + dt.steps.map(function (_, k) { return "<i class='" + (k < idx ? 'd' : k === idx ? 'on' : '') + "'></i>"; }).join('') + "<i class='" + (idx >= n ? 'on' : '') + "'></i></div>";
+    if (idx < n) { h += "<div class='ckn'>ステップ " + (idx + 1) + ' / ' + n + "</div><ol class='steps ill'>" + stepHtml(dt.steps[idx], idx, r, true) + '</ol>';
+      if (idx === 0) h += "<details class='ckm'><summary>🧺 材料を見る</summary><ul>" + r.ing.map(function (i) { return '<li>' + esc(i.n) + '<span>' + esc(scaleQ(i.q, st.srv)) + '</span></li>'; }).join('') + '</ul></details>';
+    } else h += "<div class='ckdone'><div class='dill'>" + (window.dishSVG ? window.dishSVG(r) : '') + "</div><h2>🎉 完成！おつかれさま</h2><p class='note'>写真を投稿すると、バッジやランクアップがもらえるよ</p><button class='big' data-c='post'>📷 写真を投稿する</button><button class='sub2' data-c='made'>🍽 作った（投稿しない）</button></div>";
+    h += "<div class='ckb'><button data-c='prev'" + (idx ? '' : ' disabled') + ">← 前へ</button>" + (idx < n ? "<button class='on' data-c='next'>" + (idx === n - 1 ? 'できた！' : '次へ →') + '</button>' : '') + '</div></div>';
+    return h;
+  }
+  ov.innerHTML = html(); document.body.appendChild(ov); keepOn(true);
+  ov.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-c]'); if (!b) return; var a = b.getAttribute('data-c');
+    if (a === 'x') { ov.remove(); keepOn(false); return; }
+    if (a === 'next') { idx++; buzz(); if (idx >= dt.steps.length) confetti(); }
+    if (a === 'prev' && idx > 0) idx--;
+    if (a === 'post') { ov.remove(); keepOn(false); openPost(r); return; }
+    if (a === 'made') { markMade(r); ov.remove(); keepOn(false); toast('作った記録に入れたよ 🍽'); return; }
+    ov.innerHTML = html(); ov.scrollTop = 0;
+  });
+}
 function openRecipe(id, fromSpin) {
   var r = byId[id]; if (!r) return;
   var old = $('recOv'); if (old) old.remove();
@@ -217,7 +293,7 @@ function openRecipe(id, fromSpin) {
     var fav = st.fav.indexOf(r.id) >= 0, cnt = st.made.filter(function (m) { return m.id === r.id; }).length;
     var h = "<div class='sheet'>";
     if (fromSpin) h += "<div style='text-align:center;font-weight:900;color:var(--acc)'>🎉 今日の献立はこれに決定！</div>";
-    h += "<div class='rhero'>" + (photos.length ? "<div class='rph'><img alt='' src='" + esc(photos[0].photo) + "'><span>📷 みんなが作った写真</span></div>" + (photos.length > 1 ? "<div class='rths'>" + photos.slice(1, 6).map(function (p) { return "<img alt='' src='" + esc(p.photo) + "'>"; }).join('') + '</div>' : '') : plateHtml(r)) + '<h2>' + esc(r.name) + "</h2><div class='tags'><span>" + ({ '和': '和食', '洋': '洋食', '中': '中華', '韓': '韓国', 'エスニック': 'エスニック' }[r.genre]) + '</span><span>' + r.cat + '</span><span>⏱ ' + r.min + '分</span><span>約' + r.kcal + 'kcal</span>' + (cnt ? '<span>🍽 ' + cnt + '回作った</span>' : '') + '</div></div>';
+    h += "<div class='rhero'>" + (photos.length ? "<div class='rph'><img alt='' src='" + esc(photos[0].photo) + "'><span>👑 このレシピの顔：" + esc(photos[0].name || 'ななしさん') + (photos[0].likes ? '（❤️' + photos[0].likes + '）' : '') + "</span></div>" + (photos.length > 1 ? "<div class='rths'>" + photos.slice(1, 6).map(function (p) { return "<img alt='' src='" + esc(p.photo) + "'>"; }).join('') + '</div>' : '') : plateHtml(r)) + '<h2>' + esc(r.name) + "</h2><div class='tags'><span>" + ({ '和': '和食', '洋': '洋食', '中': '中華', '韓': '韓国', 'エスニック': 'エスニック' }[r.genre]) + '</span><span>' + r.cat + '</span><span>⏱ ' + r.min + '分</span><span>約' + r.kcal + 'kcal</span>' + (cnt ? '<span>🍽 ' + cnt + '回作った</span>' : '') + '</div></div>';
     h += "<div class='card'><div class='ct'>🧺 材料<span class='rt'></span></div><div class='srv'><button data-srv='-1'>−</button><b>" + st.srv + "人分</b><button data-srv='1'>＋</button></div>";
     h += "<div class='legend'><span>✓ えらんだ食材</span><span>● 買い足しが必要</span><span>・ 調味料（家にある前提）</span></div><ul class='ing'>";
     r.ing.forEach(function (i) {
@@ -227,7 +303,7 @@ function openRecipe(id, fromSpin) {
     h += '</ul>' + (need.length ? "<button class='sub2' data-r='shop'>🛒 買い足し " + need.length + ' 品を買い物リストへ</button>' : "<p class='note' style='text-align:center;margin:10px 0 0'>🎉 足りない食材なし！今すぐ作れるよ</p>") + '</div>';
     var dt = window.recipeDetail ? window.recipeDetail(r) : { prep: [], steps: r.steps.map(function (t) { return { t: t, hint: [] }; }), tips: [], keep: '' };
     if (dt.prep.length) h += "<div class='card'><div class='ct'>🔪 下ごしらえ</div><ul class='prep'>" + dt.prep.map(function (p) { return '<li><b>' + esc(p.n) + '</b>' + esc(p.t) + '</li>'; }).join('') + '</ul></div>';
-    h += "<div class='card'><div class='ct'>👩‍🍳 作り方</div><ol class='steps'>" + dt.steps.map(function (s) { return '<li>' + (s.heat ? "<span class='heat'>🔥 " + esc(s.heat) + '</span>' : '') + (s.noq ? esc(s.t) : annot(s.t, r)) + (s.hint.length ? "<div class='hint2'>" + s.hint.map(function (x) { return '💡 ' + esc(x); }).join('<br>') + '</div>' : '') + '</li>'; }).join('') + '</ol></div>';
+    h += "<div class='card'><div class='ct'>👩‍🍳 作り方<span class='rt'>" + dt.steps.length + "ステップ</span></div><button class='cookgo' data-r='cook'>👩‍🍳 調理モードで作る<small>1ステップずつ大きく表示・画面が消えない</small></button><ol class='steps ill'>" + dt.steps.map(function (s, k) { return stepHtml(s, k, r); }).join('') + '</ol></div>';
     if (dt.tips.length) h += "<div class='card'><div class='ct'>✨ おいしく作るコツ</div><ul class='tips'>" + dt.tips.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul>' + (dt.keep ? "<p class='keep'>🧊 保存のめやす：" + esc(dt.keep) + '</p>' : '') + '</div>';
     h += "<button class='big' data-r='made'>📷 作った！写真を投稿する<small>みんなのごはんに載るよ</small></button>";
     h += "<div class='acts'><button class='mini" + (fav ? ' on' : '') + "' data-r='fav'>" + (fav ? '❤️ お気に入り済み' : '🤍 お気に入り') + "</button><button class='mini' data-r='done'>🍽 作った（投稿しない）</button><button class='mini' data-r='again'>🎰 もう一回まわす</button><button class='mini' data-r='posts'>👀 みんなの" + esc(r.name.length > 6 ? 'ごはん' : r.name) + '</button></div>';
@@ -236,7 +312,7 @@ function openRecipe(id, fromSpin) {
   }
   ov.innerHTML = html(); document.body.appendChild(ov);
   // みんなが投稿した写真があれば、イラストの代わりに写真を出す
-  try { window.FEED.list({ sort: 'new', recipe: r.id }).then(function (ps) { if (ps && ps.length && document.body.contains(ov)) { photos = ps; var y = ov.scrollTop; ov.innerHTML = html(); ov.scrollTop = y; } }).catch(function () {}); } catch (e) {}
+  try { window.FEED.list({ sort: 'new', recipe: r.id }).then(function (ps) { if (ps && ps.length && document.body.contains(ov)) { photos = ps.slice().sort(function (a, b) { return (b.likes || 0) - (a.likes || 0) || b.t - a.t; }); var y = ov.scrollTop; ov.innerHTML = html(); ov.scrollTop = y; } }).catch(function () {}); } catch (e) {}
   ov.addEventListener('click', function (e) {
     if (e.target === ov) { ov.remove(); return; }
     var b = e.target.closest('[data-srv],[data-r]'); if (!b) return;
@@ -248,6 +324,7 @@ function openRecipe(id, fromSpin) {
     else if (a === 'shop') { addShop(r); ov.innerHTML = html(); }
     else if (a === 'done') { markMade(r); ov.innerHTML = html(); toast('作った記録に入れたよ 🍽'); }
     else if (a === 'made') { ov.remove(); openPost(r); }
+    else if (a === 'cook') { openCook(r); }
     else if (a === 'again') { ov.remove(); openSpin(); }
     else if (a === 'posts') { ov.remove(); feedRecipe = r.id; st.tab = 'feed'; render(); }
   });
@@ -307,6 +384,10 @@ function shopHtml() {
 // ---- マイページ ----
 function meHtml() {
   var h = header('マイページ', 'お気に入りと、作ったごはんの記録');
+  var ps = myPosts(), bd = badgesOf(ps);
+  h += "<div class='card'><div class='ct'>📔 ごはん日記<span class='rt'>" + ps.length + '枚</span></div>' + rankHtml(ps) +
+    "<div class='bdg'>" + bd.map(function (b) { return "<span class='" + (b[3] ? 'on' : '') + "' title='" + esc(b[4]) + "'><i>" + (b[3] ? b[2] : '🔒') + '</i>' + esc(b[1]) + '<small>' + (b[3] ? 'ゲット！' : esc(b[4])) + '</small></span>'; }).join('') + '</div>' +
+    (ps.length ? "<div class='diary'>" + ps.slice().reverse().slice(0, 30).map(function (p) { var r = byId[p.id]; return "<button data-open='" + p.id + "'>" + (p.th ? "<img alt='' src='" + p.th + "'>" : '<i>' + (r ? r.emoji : '🍽') + '</i>') + '<small>' + md(p.t) + '</small></button>'; }).join('') + '</div>' : "<p class='note'>作ったごはんの写真を投稿すると、ここに並んでいくよ</p>") + '</div>';
   // 今月のカレンダー
   var n = new Date(), y = n.getFullYear(), m = n.getMonth(), first = new Date(y, m, 1).getDay(), days = new Date(y, m + 1, 0).getDate(), by = {};
   st.made.forEach(function (x) { var d = new Date(x.t); if (d.getFullYear() === y && d.getMonth() === m) (by[d.getDate()] = by[d.getDate()] || []).push(byId[x.id]); });
@@ -338,7 +419,9 @@ function loadFeed() {
   window.FEED.list({ sort: feedSort, recipe: feedRecipe }).then(function (ps) {
     if (!$('feedL')) return;
     if (!ps.length) { L.innerHTML = "<div class='empty'><i>🍳</i>まだ投稿がないよ。<br>ルーレットで決めたごはんを作って、1番目に投稿しよう！</div>"; return; }
-    L.innerHTML = ps.map(postHtml).join('');
+    var me = window.FEED.me && window.FEED.me(); if (me) { var lk = ps.filter(function (p) { return p.user_id === me; }).reduce(function (a, p) { return a + (p.likes || 0); }, 0); if (lk > get('kd-likes-recv', 0)) put('kd-likes-recv', lk); }
+    var top = feedSort === 'new' && !feedRecipe ? ps.filter(function (p) { return Date.now() - p.t < 864e5 && p.likes > 0; }).sort(function (a, b) { return b.likes - a.likes; })[0] : null;
+    L.innerHTML = (top ? "<div class='best'><b>👑 今日のベストごはん</b><small>いいねがいちばん多い1枚</small>" + postHtml(top) + '</div>' : "<div class='best0'>👑 今日いちばんいいねを集めた写真は、ここにピックアップされるよ</div>") + ps.filter(function (p) { return p !== top; }).map(postHtml).join('');
   }).catch(function () { L.innerHTML = "<div class='empty'><i>📡</i>読み込めなかった。通信を確認してね</div>"; });
 }
 function postHtml(p) {
@@ -369,12 +452,12 @@ function moreMenu(id, uid) {
 }
 
 // ---- 投稿 ----
-var postFor = null, postImg = null;
+var postFor = null, postImg = null, postThumb = null;
 function openPost(r) {
-  postFor = r; postImg = null;
+  postFor = r; postImg = null; postThumb = null;
   var ov = document.createElement('div'); ov.className = 'ov'; ov.id = 'postOv';
   ov.innerHTML = "<div class='sheet'><h2>📷 作ったごはんを投稿</h2><p class='note' style='text-align:center'>" + r.emoji + ' ' + esc(r.name) + "</p><button class='pv' id='pv'><i>📷</i>タップして写真をえらぶ</button><textarea class='tx' id='ptx' maxlength='200' placeholder='ひとこと（例: はじめて作ったけど大成功！）'></textarea>" +
-    "<p class='note'>投稿すると、このアプリを使っている全員が見られるよ。顔や住所がわかる写真はやめてね。食べ物と関係ない写真・いやがらせは削除されるよ。</p><button class='big' id='pgo'>投稿する</button><button class='sub2' id='pno' style='border-color:var(--line);color:var(--sub)'>やめる</button></div>";
+    "<div class='perk'><b>📷 投稿するともらえるもの</b><span>🏅 ごはんランクが上がる</span><span>🔥 連続投稿の記録</span><span>🎖 バッジ（和食名人・デザート職人…）</span><span>👑 いいね1位で、このレシピの「顔」に</span><span>📔 マイページのごはん日記に残る</span></div><p class='note'>投稿すると、このアプリを使っている全員が見られるよ。顔や住所がわかる写真はやめてね。食べ物と関係ない写真・いやがらせは削除されるよ。</p><button class='big' id='pgo'>投稿する</button><button class='sub2' id='pno' style='border-color:var(--line);color:var(--sub)'>やめる</button></div>";
   document.body.appendChild(ov);
   $('pv').onclick = function () { var c = $('cam'); c.value = ''; c.click(); };
   $('pno').onclick = function () { ov.remove(); };
@@ -382,7 +465,8 @@ function openPost(r) {
     if (!postImg) { toast('写真をえらんでね'); return; }
     var b = $('pgo'); b.disabled = true; b.textContent = '投稿中…';
     window.FEED.post({ recipe_id: r.id, caption: $('ptx').value.trim(), image: postImg }).then(function () {
-      markMade(r); ov.remove(); confetti(); toast('投稿したよ！🎉'); feedSort = 'new'; feedRecipe = null; st.tab = 'feed'; render();
+      var before = myPosts(), ps = before.concat([{ id: r.id, t: Date.now(), th: postThumb }]).slice(-120); put('kd-posts', ps);
+      markMade(r); ov.remove(); feedSort = 'new'; feedRecipe = null; st.tab = 'feed'; render(); rewardAfterPost(r, before, postThumb);
     }).catch(function (e) { b.disabled = false; b.textContent = '投稿する'; toast(e && e.message ? e.message : '投稿できなかった。通信を確認してね'); });
   };
 }
@@ -393,6 +477,7 @@ $('cam').addEventListener('change', function (e) {
   im.onload = function () {
     URL.revokeObjectURL(u); var s = Math.min(im.naturalWidth, im.naturalHeight), z = Math.min(1080, s), c = document.createElement('canvas'); c.width = c.height = z;
     c.getContext('2d').drawImage(im, (im.naturalWidth - s) / 2, (im.naturalHeight - s) / 2, s, s, 0, 0, z, z);
+    try { var tc = document.createElement('canvas'); tc.width = tc.height = 200; tc.getContext('2d').drawImage(c, 0, 0, 200, 200); postThumb = tc.toDataURL('image/jpeg', .7); } catch (er) {}
     c.toBlob(function (bl) { postImg = bl; var pv = $('pv'); if (pv) pv.innerHTML = "<img alt='' src='" + c.toDataURL('image/jpeg', .8) + "'>"; }, 'image/jpeg', .85);
   };
   im.src = u;
@@ -401,6 +486,8 @@ $('cam').addEventListener('change', function (e) {
 // ---- タップの受け付け ----
 document.addEventListener('click', function (e) {
   var t = e.target, b;
+  if ((b = t.closest('[data-tm]'))) { startTimer(+b.getAttribute('data-tm'), b.getAttribute('data-tl')); return; }
+  if ((b = t.closest('[data-tmx]'))) { var tid = +b.getAttribute('data-tmx'); timers = timers.filter(function (x) { return x.id !== tid; }); tickTimers(); return; }
   if ((b = t.closest('.nav [data-tab]'))) { st.tab = b.getAttribute('data-tab'); if (st.tab !== 'feed') feedRecipe = null; render(); return; }
   if ((b = t.closest('[data-cat]'))) { st.cat = b.getAttribute('data-cat'); render(); return; }
   if ((b = t.closest('[data-unpick]'))) { var un = b.getAttribute('data-unpick'), ui = st.picked.indexOf(un); if (ui >= 0) st.picked.splice(ui, 1); saveAll(); var uy = window.scrollY; render(); window.scrollTo(0, uy); return; }

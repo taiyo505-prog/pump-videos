@@ -440,4 +440,5 @@ window.dishSVG = function (r) {
   return svg;
 };
 window.dishKind = kind;
+window.FOOD_COL = C;
 })();
