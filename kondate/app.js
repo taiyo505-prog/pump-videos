@@ -146,7 +146,7 @@ function spin() {
     wheel.ang = start + total * e; drawWheel();
     var cur = Math.floor((((-wheel.ang) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2)) / seg);
     if (cur !== last) { last = cur; tick(); }
-    if (p < 1) requestAnimationFrame(f); else setTimeout(function () { var ov = $('spinOv'); if (ov) ov.remove(); confetti(); buzz(); openRecipe(wheel.items[win].id, true); }, 350);
+    if (p < 1) requestAnimationFrame(f); else setTimeout(function () { var ov = $('spinOv'); if (ov) ov.remove(); confetti(); buzz(); bump('spins'); openRecipe(wheel.items[win].id, true); }, 350);
   }
   requestAnimationFrame(f);
 }
@@ -213,21 +213,61 @@ function myPosts() { return get('kd-posts', []); }
 function streakOf(ps) { var days = {}; ps.forEach(function (p) { days[dkey(p.t)] = 1; }); var best = 0, cur = 0, now = 0; var keys = Object.keys(days).map(function (k) { var a = k.split('-'); return new Date(+a[0], +a[1] - 1, +a[2]).getTime(); }).sort(function (a, b) { return a - b; });
   keys.forEach(function (d, i) { cur = i && d - keys[i - 1] < 864e5 * 1.5 ? cur + 1 : 1; if (cur > best) best = cur; });
   var today = new Date(); today.setHours(0, 0, 0, 0); var last = keys[keys.length - 1]; now = last != null && today.getTime() - last < 864e5 * 1.5 ? cur : 0; return { best: best, now: now }; }
+// アプリの中の行動の回数（いいねした数・コメントした数・ルーレット回数…）
+function stat() { return get('kd-stat', {}); }
+function bump(k, n) { var x = stat(); x[k] = (x[k] || 0) + (n == null ? 1 : n); put('kd-stat', x); setTimeout(checkBadges, 50); }
+function flag(k) { var x = stat(); if (!x[k]) { x[k] = 1; put('kd-stat', x); setTimeout(checkBadges, 50); } }
+// バッジ: [キー, 名前, 絵, 今の数, 目標, 取り方, グループ]
 function badgesOf(ps) {
-  var g = {}, cats = {}, ids = {}; ps.forEach(function (p) { var r = byId[p.id]; if (!r) return; g[r.genre] = (g[r.genre] || 0) + 1; cats[r.cat] = (cats[r.cat] || 0) + 1; ids[p.id] = 1; });
-  var s2 = streakOf(ps), n = ps.length, likes = get('kd-likes-recv', 0);
-  return [['first', 'はじめての投稿', '📷', n >= 1, '1回投稿する'], ['s3', '3日連続', '🔥', s2.best >= 3, '3日続けて投稿'], ['s7', '1週間連続', '☄️', s2.best >= 7, '7日続けて投稿'],
-    ['p10', '10皿達成', '🍽', n >= 10, '10回投稿'], ['p30', '30皿達成', '🏅', n >= 30, '30回投稿'], ['var', 'レパートリー10', '🎨', Object.keys(ids).length >= 10, '10種類のレシピを投稿'],
-    ['wa', '和食名人', '🍙', (g['和'] || 0) >= 5, '和食を5回'], ['yo', '洋食名人', '🍝', (g['洋'] || 0) >= 5, '洋食を5回'], ['chu', '中華名人', '🥟', (g['中'] || 0) >= 5, '中華を5回'],
-    ['kan', '韓国名人', '🌶️', (g['韓'] || 0) >= 3, '韓国料理を3回'], ['eth', 'エスニック名人', '🌮', (g['エスニック'] || 0) >= 3, 'エスニックを3回'], ['sw', 'デザート職人', '🍰', (cats['デザート'] || 0) >= 3, 'デザートを3回'],
-    ['l10', 'いいね10こ', '❤️', likes >= 10, 'いいねを合計10こもらう'], ['l50', '人気者', '💖', likes >= 50, 'いいねを合計50こもらう']];
+  var g = {}, cats = {}, ids = {}, morning = 0, night = 0, wkend = 0;
+  ps.forEach(function (p) { var r = byId[p.id], d = new Date(p.t), h = d.getHours(); if (h >= 5 && h < 9) morning++; if (h >= 22 || h < 3) night++; if (d.getDay() === 0 || d.getDay() === 6) wkend++; if (!r) return; g[r.genre] = (g[r.genre] || 0) + 1; cats[r.cat] = (cats[r.cat] || 0) + 1; ids[p.id] = 1; });
+  var s2 = streakOf(ps), n = ps.length, x = stat(), lk = get('kd-likes-recv', 0), cr = get('kd-cmt-recv', 0), nid = Object.keys(ids).length;
+  var gen = ['和', '洋', '中', '韓', 'エスニック'].filter(function (k) { return g[k]; }).length, cat = ['主菜', '丼・麺', '副菜', '汁物', 'デザート'].filter(function (k) { return cats[k]; }).length;
+  var L = [
+    ['p1', 'はじめての投稿', '📷', n, 1, '1回投稿する', '投稿'], ['p10', '10皿達成', '🍽', n, 10, '10回投稿', '投稿'], ['p30', '30皿達成', '🏅', n, 30, '30回投稿', '投稿'], ['p60', '60皿達成', '🎖', n, 60, '60回投稿', '投稿'], ['p100', '100皿の伝説', '💯', n, 100, '100回投稿', '投稿'],
+    ['s3', '3日連続', '🔥', s2.best, 3, '3日続けて投稿', '連続'], ['s7', '1週間連続', '☄️', s2.best, 7, '7日続けて投稿', '連続'], ['s14', '2週間連続', '🌋', s2.best, 14, '14日続けて投稿', '連続'], ['s30', '30日連続', '👑', s2.best, 30, '30日続けて投稿', '連続'],
+    ['l10', 'いいね10こ', '❤️', lk, 10, 'いいねを合計10こもらう', 'いいね'], ['l50', '人気者', '💖', lk, 50, 'いいねを合計50こもらう', 'いいね'], ['l100', 'ごはんアイドル', '💘', lk, 100, 'いいねを合計100こもらう', 'いいね'], ['l300', 'ごはんスター', '🌟', lk, 300, 'いいねを合計300こもらう', 'いいね'], ['l1000', 'レジェンド', '🏆', lk, 1000, 'いいねを合計1000こもらう', 'いいね'],
+    ['c5', 'はじめてのコメント', '💬', cr, 1, 'コメントを1件もらう', 'コメント'], ['c10', '話題のごはん', '🗨️', cr, 10, 'コメントを合計10件もらう', 'コメント'], ['c50', 'みんなの注目', '🗣️', cr, 50, 'コメントを合計50件もらう', 'コメント'], ['c100', 'うわさの台所', '📣', cr, 100, 'コメントを合計100件もらう', 'コメント'],
+    ['g1', 'はじめてのいいね', '👍', x.likesGiven || 0, 1, 'だれかの写真にいいね', '応援'], ['g30', '応援団', '🙌', x.likesGiven || 0, 30, 'いいねを30回する', '応援'], ['g100', '応援団長', '🎌', x.likesGiven || 0, 100, 'いいねを100回する', '応援'],
+    ['m1', 'はじめての感想', '✉️', x.cmtGiven || 0, 1, 'コメントを1回書く', '応援'], ['m20', 'コメント上手', '💌', x.cmtGiven || 0, 20, 'コメントを20回書く', '応援'], ['m50', 'やさしい常連さん', '🫶', x.cmtGiven || 0, 50, 'コメントを50回書く', '応援'],
+    ['v10', 'レパートリー10', '🎨', nid, 10, '10種類のレシピを投稿', '料理'], ['v30', 'レパートリー30', '🌈', nid, 30, '30種類のレシピを投稿', '料理'], ['v100', 'レシピ博士', '📚', nid, 100, '100種類のレシピを投稿', '料理'],
+    ['wa', '和食名人', '🍙', g['和'] || 0, 5, '和食を5回投稿', '料理'], ['yo', '洋食名人', '🍝', g['洋'] || 0, 5, '洋食を5回投稿', '料理'], ['chu', '中華名人', '🥟', g['中'] || 0, 5, '中華を5回投稿', '料理'], ['kan', '韓国名人', '🌶️', g['韓'] || 0, 3, '韓国料理を3回投稿', '料理'], ['eth', 'エスニック名人', '🌮', g['エスニック'] || 0, 3, 'エスニックを3回投稿', '料理'],
+    ['sw', 'デザート職人', '🍰', cats['デザート'] || 0, 3, 'デザートを3回投稿', '料理'], ['soup', '汁物マスター', '🥣', cats['汁物'] || 0, 5, '汁物を5回投稿', '料理'], ['side', '副菜の達人', '🥗', cats['副菜'] || 0, 5, '副菜を5回投稿', '料理'],
+    ['allg', '世界のごはん', '🌏', gen, 5, '和・洋・中・韓・エスニックを全部投稿', '料理'], ['allc', '全カテゴリ制覇', '🏁', cat, 5, '主菜・丼麺・副菜・汁物・デザートを全部投稿', '料理'],
+    ['am', '朝ごはん派', '🌅', morning, 3, '朝5〜9時に3回投稿', '時間'], ['pm', '夜食の達人', '🌙', night, 3, '夜22時すぎに3回投稿', '時間'], ['we', '週末シェフ', '🎉', wkend, 5, '土日に5回投稿', '時間'],
+    ['r10', 'ルーレット好き', '🎰', x.spins || 0, 10, 'ルーレットを10回まわす', 'アプリ'], ['r100', 'ルーレット中毒', '🎡', x.spins || 0, 100, 'ルーレットを100回まわす', 'アプリ'],
+    ['ck1', '調理モード完走', '👩‍🍳', x.cookDone || 0, 1, '調理モードで最後まで作る', 'アプリ'], ['ck10', '台所の住人', '🧑‍🍳', x.cookDone || 0, 10, '調理モードで10回完走', 'アプリ'],
+    ['tm', 'タイマー上手', '⏱', x.timers || 0, 10, 'タイマーを10回使う', 'アプリ'], ['sh', '買い物上手', '🛒', x.shopDone || 0, 20, '買い物リストを20個チェック', 'アプリ'], ['wk', '献立プランナー', '🗓', x.weeks || 0, 1, '1週間の献立を作る', 'アプリ'], ['fv', 'お気に入り10', '⭐', st.fav.length, 10, 'お気に入りを10品', 'アプリ'],
+    ['best', '今日のベストごはん', '👑', x.best || 0, 1, '今日のベストごはんに選ばれる', 'とくべつ'], ['face', 'レシピの顔', '🖼️', x.face || 0, 1, 'どれかのレシピの顔になる', 'とくべつ']
+  ];
+  return L.map(function (b) { return [b[0], b[1], b[2], b[3] >= b[4], b[5], Math.min(b[3], b[4]), b[4], b[6]]; });
 }
+// 新しく取ったバッジがあればお知らせ（投稿以外の行動でも）
+function checkBadges(quiet) {
+  var got = get('kd-badges', null), now = badgesOf(myPosts()).filter(function (b) { return b[3]; }), keys = now.map(function (b) { return b[0]; });
+  if (got === null) { put('kd-badges', keys); return []; }
+  var nw = now.filter(function (b) { return got.indexOf(b[0]) < 0; }); put('kd-badges', keys);
+  if (!quiet) nw.forEach(function (b, i) { setTimeout(function () { toast('🎖 バッジゲット！ ' + b[2] + ' ' + b[1]); confetti(); }, i * 1600); });
+  return nw;
+}
+var badgeAll = false;
+function badgeHtml(bd) {
+  var got = bd.filter(function (b) { return b[3]; }).length, groups = [];
+  bd.forEach(function (b) { if (groups.indexOf(b[7]) < 0) groups.push(b[7]); });
+  var h = "<div class='bdh'><b>🎖 バッジ</b><span>" + got + ' / ' + bd.length + ' ゲット</span></div>';
+  var show = badgeAll ? bd : bd.filter(function (b) { return b[3]; }).concat(bd.filter(function (b) { return !b[3]; }).sort(function (a, c) { return c[5] / c[6] - a[5] / a[6]; }).slice(0, 6));
+  if (!badgeAll) h += "<div class='bdg'>" + show.map(badgeCell).join('') + "</div><button class='sub2' data-act='badgeAll'>ぜんぶのバッジを見る（" + bd.length + "種類）</button>";
+  else groups.forEach(function (gname) { h += "<div class='bdgt'>" + gname + "</div><div class='bdg'>" + bd.filter(function (b) { return b[7] === gname; }).map(badgeCell).join('') + '</div>'; });
+  if (badgeAll) h += "<button class='sub2' data-act='badgeAll'>とじる</button>";
+  return h;
+}
+function badgeCell(b) { return "<span class='" + (b[3] ? 'on' : '') + "'><i>" + (b[3] ? b[2] : '🔒') + '</i>' + esc(b[1]) + '<small>' + (b[3] ? 'ゲット！' : esc(b[4])) + '</small>' + (b[3] ? '' : "<em><u style='width:" + Math.round(b[5] / b[6] * 100) + "%'></u></em><small class='bn'>" + b[5] + ' / ' + b[6] + '</small>') + '</span>'; }
 function rankOf(n) { var r = RANKS[0], nx = null; RANKS.forEach(function (x, i) { if (n >= x[0]) { r = x; nx = RANKS[i + 1] || null; } }); return { r: r, next: nx }; }
 function rankHtml(ps) { var n = ps.length, k = rankOf(n), s2 = streakOf(ps), pct = k.next ? Math.max(5, Math.round((n - k.r[0]) / (k.next[0] - k.r[0]) * 100)) : 100;
   return "<div class='rank'><div class='rk1'><span class='rki'>" + k.r[2] + "</span><div><small>ごはんランク</small><b>" + k.r[1] + "</b></div><div class='rks'>🔥<b>" + s2.now + '</b><small>日連続</small></div></div><div class=\'rkbar\'><i style=\'width:' + pct + "%'></i></div><small class='rkn'>" + (k.next ? 'あと' + (k.next[0] - n) + '回投稿で「' + k.next[2] + ' ' + k.next[1] + '」' : '最高ランク達成！') + '</small></div>'; }
 // 投稿のあとの「ごほうび」画面
 function rewardAfterPost(r, before, thumb) {
-  var ps = myPosts(), n = ps.length, kb = rankOf(before.length), ka = rankOf(n), bb = badgesOf(before), ba = badgesOf(ps), nb = ba.filter(function (b, i) { return b[3] && !bb[i][3]; });
+  var ps = myPosts(), n = ps.length, kb = rankOf(before.length), ka = rankOf(n), nb = checkBadges(true);
   var ov = document.createElement('div'); ov.className = 'ov'; ov.id = 'rwOv';
   var h = "<div class='sheet rw'><h2>🎉 投稿ありがとう！</h2>" + (thumb ? "<img class='rwimg' alt='' src='" + thumb + "'>" : '');
   if (ka.r[0] !== kb.r[0]) h += "<div class='rwup'><small>ランクアップ！</small><b>" + ka.r[2] + ' ' + ka.r[1] + '</b></div>';
@@ -246,7 +286,7 @@ function stepHtml(s, k, r, big) {
 function fmtT(sec) { var m = Math.floor(sec / 60), s2 = sec % 60; return m ? m + '分' + (s2 ? s2 + '秒' : '') : s2 + '秒'; }
 // ---- キッチンタイマー（複数OK・画面上に出る） ----
 var timers = [];
-function startTimer(sec, label) { timers.push({ end: Date.now() + sec * 1000, label: label, id: Math.random() }); toast('⏱ ' + fmtT(sec) + ' のタイマーをスタート'); buzz(); tickTimers(); }
+function startTimer(sec, label) { bump('timers'); timers.push({ end: Date.now() + sec * 1000, label: label, id: Math.random() }); toast('⏱ ' + fmtT(sec) + ' のタイマーをスタート'); buzz(); tickTimers(); }
 function beep() { try { var A = window.AudioContext || window.webkitAudioContext; if (!A) return; if (!actx) actx = new A(); [0, .35, .7].forEach(function (d) { var o = actx.createOscillator(), g = actx.createGain(); o.frequency.value = 880; g.gain.setValueAtTime(.25, actx.currentTime + d); g.gain.exponentialRampToValueAtTime(.001, actx.currentTime + d + .3); o.connect(g); g.connect(actx.destination); o.start(actx.currentTime + d); o.stop(actx.currentTime + d + .32); }); } catch (e) {} }
 var tmLoop = null;
 function tickTimers() {
@@ -276,7 +316,7 @@ function openCook(r) {
   ov.addEventListener('click', function (e) {
     var b = e.target.closest('[data-c]'); if (!b) return; var a = b.getAttribute('data-c');
     if (a === 'x') { ov.remove(); keepOn(false); return; }
-    if (a === 'next') { idx++; buzz(); if (idx >= dt.steps.length) confetti(); }
+    if (a === 'next') { idx++; buzz(); if (idx >= dt.steps.length) { confetti(); bump('cookDone'); } }
     if (a === 'prev' && idx > 0) idx--;
     if (a === 'post') { ov.remove(); keepOn(false); openPost(r); return; }
     if (a === 'made') { markMade(r); ov.remove(); keepOn(false); toast('作った記録に入れたよ 🍽'); return; }
@@ -312,7 +352,7 @@ function openRecipe(id, fromSpin) {
   }
   ov.innerHTML = html(); document.body.appendChild(ov);
   // みんなが投稿した写真があれば、イラストの代わりに写真を出す
-  try { window.FEED.list({ sort: 'new', recipe: r.id }).then(function (ps) { if (ps && ps.length && document.body.contains(ov)) { photos = ps.slice().sort(function (a, b) { return (b.likes || 0) - (a.likes || 0) || b.t - a.t; }); var y = ov.scrollTop; ov.innerHTML = html(); ov.scrollTop = y; } }).catch(function () {}); } catch (e) {}
+  try { window.FEED.list({ sort: 'new', recipe: r.id }).then(function (ps) { if (ps && ps.length && document.body.contains(ov)) { photos = ps.slice().sort(function (a, b) { return (b.likes || 0) - (a.likes || 0) || b.t - a.t; }); try { if (window.FEED.me && photos[0].user_id === window.FEED.me()) flag('face'); } catch (er) {} var y = ov.scrollTop; ov.innerHTML = html(); ov.scrollTop = y; } }).catch(function () {}); } catch (e) {}
   ov.addEventListener('click', function (e) {
     if (e.target === ov) { ov.remove(); return; }
     var b = e.target.closest('[data-srv],[data-r]'); if (!b) return;
@@ -337,7 +377,7 @@ function addShop(r) {
 function shopBadge() { var n = st.shop.filter(function (x) { return !x.done; }).length, b = $('shopBd'); if (!b) return; b.hidden = !n; b.textContent = n; }
 
 // ---- 1週間の献立 ----
-function makeWeek() {
+function makeWeek() { bump('weeks');
   var pool = RECIPES.filter(function (r) { return (r.cat === '主菜' || r.cat === '丼・麺') && passFilter(Object.assign({}, r, { cat: st.flt.cat === 'all' ? r.cat : st.flt.cat })); });
   var good = pool.filter(function (r) { return score(r) > 0; }), rest = pool.filter(function (r) { return score(r) === 0; });
   function sh(a) { a = a.slice(); for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
@@ -386,7 +426,7 @@ function meHtml() {
   var h = header('マイページ', 'お気に入りと、作ったごはんの記録');
   var ps = myPosts(), bd = badgesOf(ps);
   h += "<div class='card'><div class='ct'>📔 ごはん日記<span class='rt'>" + ps.length + '枚</span></div>' + rankHtml(ps) +
-    "<div class='bdg'>" + bd.map(function (b) { return "<span class='" + (b[3] ? 'on' : '') + "' title='" + esc(b[4]) + "'><i>" + (b[3] ? b[2] : '🔒') + '</i>' + esc(b[1]) + '<small>' + (b[3] ? 'ゲット！' : esc(b[4])) + '</small></span>'; }).join('') + '</div>' +
+    badgeHtml(bd) +
     (ps.length ? "<div class='diary'>" + ps.slice().reverse().slice(0, 30).map(function (p) { var r = byId[p.id]; return "<button data-open='" + p.id + "'>" + (p.th ? "<img alt='' src='" + p.th + "'>" : '<i>' + (r ? r.emoji : '🍽') + '</i>') + '<small>' + md(p.t) + '</small></button>'; }).join('') + '</div>' : "<p class='note'>作ったごはんの写真を投稿すると、ここに並んでいくよ</p>") + '</div>';
   // 今月のカレンダー
   var n = new Date(), y = n.getFullYear(), m = n.getMonth(), first = new Date(y, m, 1).getDay(), days = new Date(y, m + 1, 0).getDate(), by = {};
@@ -419,8 +459,9 @@ function loadFeed() {
   window.FEED.list({ sort: feedSort, recipe: feedRecipe }).then(function (ps) {
     if (!$('feedL')) return;
     if (!ps.length) { L.innerHTML = "<div class='empty'><i>🍳</i>まだ投稿がないよ。<br>ルーレットで決めたごはんを作って、1番目に投稿しよう！</div>"; return; }
-    var me = window.FEED.me && window.FEED.me(); if (me) { var lk = ps.filter(function (p) { return p.user_id === me; }).reduce(function (a, p) { return a + (p.likes || 0); }, 0); if (lk > get('kd-likes-recv', 0)) put('kd-likes-recv', lk); }
+    var me = window.FEED.me && window.FEED.me(); if (me) { var lk = ps.filter(function (p) { return p.user_id === me; }).reduce(function (a, p) { return a + (p.likes || 0); }, 0); if (lk > get('kd-likes-recv', 0)) put('kd-likes-recv', lk); var cm = ps.filter(function (p) { return p.user_id === me; }).reduce(function (a, p) { return a + (p.comments || 0); }, 0); if (cm > get('kd-cmt-recv', 0)) put('kd-cmt-recv', cm); setTimeout(checkBadges, 300); }
     var top = feedSort === 'new' && !feedRecipe ? ps.filter(function (p) { return Date.now() - p.t < 864e5 && p.likes > 0; }).sort(function (a, b) { return b.likes - a.likes; })[0] : null;
+    if (top && me && top.user_id === me) flag('best');
     L.innerHTML = (top ? "<div class='best'><b>👑 今日のベストごはん</b><small>いいねがいちばん多い1枚</small>" + postHtml(top) + '</div>' : "<div class='best0'>👑 今日いちばんいいねを集めた写真は、ここにピックアップされるよ</div>") + ps.filter(function (p) { return p !== top; }).map(postHtml).join('');
   }).catch(function () { L.innerHTML = "<div class='empty'><i>📡</i>読み込めなかった。通信を確認してね</div>"; });
 }
@@ -483,6 +524,7 @@ $('cam').addEventListener('change', function (e) {
   im.src = u;
 });
 
+checkBadges(true);
 // ---- タップの受け付け ----
 document.addEventListener('click', function (e) {
   var t = e.target, b;
@@ -499,16 +541,17 @@ document.addEventListener('click', function (e) {
   if ((b = t.closest('[data-fg]'))) { st.flt.genre = b.getAttribute('data-fg'); saveAll(); keep(); return; }
   if ((b = t.closest('[data-open]'))) { openRecipe(b.getAttribute('data-open')); return; }
   if ((b = t.closest('[data-fs]'))) { var v = b.getAttribute('data-fs'); if (v === 'all') feedRecipe = null; else feedSort = v; render(); return; }
-  if ((b = t.closest('[data-like]'))) { var id = b.getAttribute('data-like'), on = b.classList.contains('on'), nn = parseInt(b.textContent.replace(/\D/g, ''), 10) || 0; b.classList.toggle('on', !on); b.textContent = (on ? '🤍 ' : '❤️ ') + Math.max(0, nn + (on ? -1 : 1)); buzz(); window.FEED.like(id, !on).catch(function () { toast('いいねできなかった'); }); return; }
+  if ((b = t.closest('[data-like]'))) { var id = b.getAttribute('data-like'), on = b.classList.contains('on'), nn = parseInt(b.textContent.replace(/\D/g, ''), 10) || 0; b.classList.toggle('on', !on); b.textContent = (on ? '🤍 ' : '❤️ ') + Math.max(0, nn + (on ? -1 : 1)); buzz(); if (!on) bump('likesGiven'); window.FEED.like(id, !on).catch(function () { toast('いいねできなかった'); }); return; }
   if ((b = t.closest('[data-cmt]'))) { var box = document.querySelector("[data-cbox='" + b.getAttribute('data-cmt') + "']"); if (box) openComments(b.getAttribute('data-cmt'), box); return; }
-  if ((b = t.closest('[data-csend]'))) { var inp = b.parentNode.querySelector('input'), tx = inp.value.trim(), pid = b.getAttribute('data-csend'); if (!tx) return; b.disabled = true; window.FEED.comment(pid, tx).then(function () { var bx = document.querySelector("[data-cbox='" + pid + "']"); bx.hidden = true; openComments(pid, bx); var cb = document.querySelector("[data-cmt='" + pid + "']"); if (cb) cb.textContent = '💬 ' + ((parseInt(cb.textContent.replace(/\D/g, ''), 10) || 0) + 1); }).catch(function (er) { b.disabled = false; toast(er && er.message ? er.message : '送れなかった'); }); return; }
+  if ((b = t.closest('[data-csend]'))) { var inp = b.parentNode.querySelector('input'), tx = inp.value.trim(), pid = b.getAttribute('data-csend'); if (!tx) return; b.disabled = true; window.FEED.comment(pid, tx).then(function () { bump('cmtGiven'); var bx = document.querySelector("[data-cbox='" + pid + "']"); bx.hidden = true; openComments(pid, bx); var cb = document.querySelector("[data-cmt='" + pid + "']"); if (cb) cb.textContent = '💬 ' + ((parseInt(cb.textContent.replace(/\D/g, ''), 10) || 0) + 1); }).catch(function (er) { b.disabled = false; toast(er && er.message ? er.message : '送れなかった'); }); return; }
   if ((b = t.closest('[data-more]'))) { moreMenu(b.getAttribute('data-more'), b.getAttribute('data-uid')); return; }
-  if ((b = t.closest('[data-sc]'))) { var x = st.shop[+b.getAttribute('data-sc')]; if (x) { x.done = b.checked; saveAll(); render(); } return; }
+  if ((b = t.closest('[data-sc]'))) { var x = st.shop[+b.getAttribute('data-sc')]; if (x) { if (b.checked && !x.done) bump('shopDone'); x.done = b.checked; saveAll(); render(); } return; }
   if ((b = t.closest('[data-sx]'))) { st.shop.splice(+b.getAttribute('data-sx'), 1); saveAll(); render(); return; }
   if ((b = t.closest('[data-act]'))) {
     var a = b.getAttribute('data-act');
     if (a === 'spin') openSpin();
     else if (a === 'week') openWeek();
+    else if (a === 'badgeAll') { badgeAll = !badgeAll; keep(); }
     else if (a === 'clear') { st.picked = []; st.must = []; saveAll(); render(); }
     else if (a === 'shopAdd') { var v2 = ($('shopIn').value || '').trim(); if (v2) { st.shop.unshift({ n: v2, from: ['自分で追加'], done: false }); saveAll(); render(); } }
     else if (a === 'shopClear') { st.shop = st.shop.filter(function (x) { return !x.done; }); saveAll(); render(); }
