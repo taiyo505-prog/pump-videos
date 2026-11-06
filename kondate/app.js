@@ -469,7 +469,7 @@ function loadFeed() {
 }
 function postHtml(p) {
   var r = byId[p.recipe_id];
-  return "<div class='post' data-pid='" + esc(p.id) + "'><div class='ph'><img loading='lazy' alt='' src='" + esc(p.photo) + "'>" + (r ? "<button class='rt' data-open='" + r.id + "' style='border:0'>" + r.emoji + ' ' + esc(r.name) + ' のレシピ ›</button>' : '') + "</div><div class='bd2'><div class='who'>" + avHtml(p) + esc(p.name || 'ななしさん') + '<small>' + ago(p.t) + '</small></div>' + (p.caption ? "<div class='cap'>" + esc(p.caption) + '</div>' : '') +
+  return "<div class='post' data-pid='" + esc(p.id) + "'><div class='ph'><img loading='lazy' alt='' src='" + esc(p.photo) + "'>" + (r ? "<button class='rt' data-open='" + r.id + "' style='border:0'>" + r.emoji + ' ' + esc(r.name) + ' のレシピ ›</button>' : '') + "</div><div class='bd2'><div class='who' data-user='" + esc(p.user_id || '') + "'>" + avHtml(p) + esc(p.name || 'ななしさん') + pubHtml(p.pub) + '<small>' + ago(p.t) + '</small></div>' + (p.caption ? "<div class='cap'>" + esc(p.caption) + '</div>' : '') +
     "<div class='pb'><button data-like='" + esc(p.id) + "' class='" + (p.liked ? 'on' : '') + "'>" + (p.liked ? '❤️' : '🤍') + ' ' + (p.likes || 0) + "</button><button data-cmt='" + esc(p.id) + "'>💬 " + (p.comments || 0) + "</button><button class='mo' data-more='" + esc(p.id) + "' data-uid='" + esc(p.user_id || '') + "'>…</button></div><div class='cm' data-cbox='" + esc(p.id) + "' hidden></div></div></div>";
 }
 function openComments(id, box) {
@@ -528,7 +528,32 @@ function mergeIn(d) {
 }
 function syncPull() { if (!window.FEED.pullProfile) return Promise.resolve(); return window.FEED.pullProfile().then(function (p) { if (p && p.data) mergeIn(p.data); checkBadges(true); return syncPush(); }).catch(function () {}); }
 var syncT = null;
-function syncPush() { if (isGuest() || !window.FEED.pushProfile) return Promise.resolve(); var m = window.FEED_LOCAL && window.FEED_LOCAL.me ? window.FEED_LOCAL.me() : {}; return window.FEED.pushProfile({ name: m.name, avatar: m.avatar, data: syncData() }).catch(function () {}); }
+function syncPush() { if (isGuest() || !window.FEED.pushProfile) return Promise.resolve(); var m = window.FEED_LOCAL && window.FEED_LOCAL.me ? window.FEED_LOCAL.me() : {}, ps = myPosts(), k = rankOf(ps.length);
+  return window.FEED.pushProfile({ name: m.name, avatar: m.avatar, data: syncData(), rank: k.r[2] + ' ' + k.r[1], badges: badgesOf(ps).filter(function (b) { return b[3]; }).map(function (b) { return b[0]; }), post_count: ps.length }).catch(function () {}); }
+// ---- ほかの人に見えるバッジ ----
+var BDEF = null;
+function bdef() { if (!BDEF) { BDEF = {}; badgesOf([]).forEach(function (b) { BDEF[b[0]] = { icon: b[2], name: b[1], goal: b[6], how: b[4] }; }); } return BDEF; }
+function topBadges(keys, n) { var d = bdef(); return (keys || []).filter(function (k) { return d[k]; }).sort(function (a, b) { return d[b].goal - d[a].goal; }).slice(0, n); }
+function pubHtml(pub) {
+  if (!pub) return '';
+  var r = (pub.rank || '').split(' ')[0], tb = topBadges(pub.badges, 3), d = bdef();
+  return "<span class='pubb'>" + (r ? "<i title='" + esc(pub.rank) + "'>" + esc(r) + '</i>' : '') + tb.map(function (k) { return "<i title='" + esc(d[k].name) + "'>" + d[k].icon + '</i>'; }).join('') + '</span>';
+}
+// 名前・アイコンを押すと、その人のプロフィール（バッジ全部・投稿）
+function openUser(uid) {
+  if (!uid || !window.FEED.publicProfile) return;
+  var ov = document.createElement('div'); ov.className = 'ov'; ov.id = 'userOv';
+  ov.innerHTML = "<div class='sheet up'><div class='empty'><i>⏳</i>読み込み中…</div></div>"; document.body.appendChild(ov);
+  ov.addEventListener('click', function (e) { if (e.target === ov || e.target.closest('[data-ux]')) ov.remove(); });
+  Promise.all([window.FEED.publicProfile(uid), window.FEED.list({ sort: 'new', user: uid })]).then(function (res) {
+    var pr = res[0] || {}, posts = res[1] || [], d = bdef(), keys = topBadges(pr.badges, 80);
+    var name = pr.name || (posts[0] && posts[0].name) || 'ななしさん', av = pr.avatar_url || pr.avatar ? pr : (posts[0] || {});
+    var h = "<div class='sheet up'><div class='phr'>" + pavHtml(av, 'xl') + "<div class='phs'><div><b>" + (pr.post_count || posts.length) + '</b><small>投稿</small></div><div><b>' + posts.reduce(function (a, p) { return a + (p.likes || 0); }, 0) + '</b><small>いいね</small></div><div><b>' + keys.length + "</b><small>バッジ</small></div></div></div><div class='phn'>" + esc(name) + "</div><div class='phk'>" + esc(pr.rank || '') + '</div>';
+    h += "<div class='bdh'><b>🎖 バッジ</b><span>" + keys.length + ' 個</span></div>' + (keys.length ? "<div class='bdg'>" + keys.map(function (k) { return "<span class='on'><i>" + d[k].icon + '</i>' + esc(d[k].name) + '</span>'; }).join('') + '</div>' : "<p class='note'>まだバッジはないみたい</p>");
+    h += "<div class='bdh'><b>📷 投稿</b><span>" + posts.length + "</span></div><div class='diary'>" + posts.slice(0, 30).map(function (p) { var r = byId[p.recipe_id]; return "<button data-open='" + esc(p.recipe_id) + "' data-ux='1'><img alt='' src='" + esc(p.photo) + "'><small>" + (r ? r.emoji : '') + '</small></button>'; }).join('') + "</div><button class='sub2' data-ux='1'>とじる</button></div>";
+    ov.innerHTML = h;
+  }).catch(function () { ov.innerHTML = "<div class='sheet up'><div class='empty'><i>📡</i>読み込めなかった</div><button class='sub2' data-ux='1'>とじる</button></div>"; });
+}
 function syncSoon() { if (isGuest()) return; clearTimeout(syncT); syncT = setTimeout(syncPush, 3000); }
 function avHtml(p, big) { return p && p.avatar_url ? "<span class='av" + (big ? ' big' : '') + "'><img alt='' src='" + esc(p.avatar_url) + "'></span>" : "<span class='av" + (big ? ' big' : '') + "'>" + esc((p && p.avatar) || '🍙') + '</span>'; }
 var AVS = ['🍙', '🍳', '🥕', '🍅', '🧅', '🍓', '🥐', '🍮', '🐣', '🐱', '🐶', '🐻', '🍜', '🍰'];
@@ -619,6 +644,7 @@ document.addEventListener('click', function (e) {
   if ((b = t.closest('[data-fc]'))) { st.flt.cat = b.getAttribute('data-fc'); saveAll(); keep(); return; }
   if ((b = t.closest('[data-fm]'))) { st.flt.min = +b.getAttribute('data-fm'); saveAll(); keep(); return; }
   if ((b = t.closest('[data-fg]'))) { st.flt.genre = b.getAttribute('data-fg'); saveAll(); keep(); return; }
+  if ((b = t.closest('[data-user]')) && b.getAttribute('data-user')) { openUser(b.getAttribute('data-user')); return; }
   if ((b = t.closest('[data-open]'))) { openRecipe(b.getAttribute('data-open')); return; }
   if ((b = t.closest('[data-fs]'))) { var v = b.getAttribute('data-fs'); if (v === 'all') feedRecipe = null; else feedSort = v; render(); return; }
   if (t.closest('[data-like],[data-csend]') && isGuest()) { openLogin(null, 'いいね・コメントするには、ログインが必要だよ'); return; }

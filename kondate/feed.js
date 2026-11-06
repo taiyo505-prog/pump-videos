@@ -17,6 +17,7 @@ var local = {
   list: function (o) {
     var l = get(LS, []).filter(function (p) { return blocked.indexOf(p.user_id) < 0; });
     if (o.recipe) l = l.filter(function (p) { return p.recipe_id === o.recipe; });
+    if (o.user) l = l.filter(function (p) { return p.user_id === o.user; });
     if (o.sort === 'hot') { var wk = Date.now() - 7 * 864e5; l = l.filter(function (p) { return p.t > wk; }).sort(function (a, b) { return b.likes - a.likes; }); }
     else l.sort(function (a, b) { return b.t - a.t; });
     return Promise.resolve(l);

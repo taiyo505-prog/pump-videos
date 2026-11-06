@@ -22,6 +22,7 @@ window.FEED = {
     return ready.catch(function () {}).then(function () {
       var q = sb.from('posts').select('id,user_id,name,avatar,avatar_url,recipe_id,caption,photo_path,likes,comments,created_at');
       if (o.recipe) q = q.eq('recipe_id', o.recipe);
+      if (o.user) q = q.eq('user_id', o.user);
       if (o.sort === 'hot') q = q.gte('created_at', new Date(Date.now() - 7 * 864e5).toISOString()).order('likes', { ascending: false }).order('created_at', { ascending: false });
       else q = q.order('created_at', { ascending: false });
       return q.limit(60);
@@ -29,12 +30,20 @@ window.FEED = {
       var bl = L.blocked();
       rows = rows.filter(function (p) { return bl.indexOf(p.user_id) < 0; });
       var ps = rows.map(function (p) { return { id: p.id, user_id: p.user_id, name: p.name, avatar: p.avatar, avatar_url: p.avatar_url, recipe_id: p.recipe_id, caption: p.caption, photo: url(p.photo_path), t: Date.parse(p.created_at), likes: p.likes, comments: p.comments, liked: false }; });
-      if (!uid || !ps.length) return ps;
+      if (!uid || !ps.length) return Promise.resolve(ps);
       return sb.from('likes').select('post_id').eq('user_id', uid).in('post_id', ps.map(function (p) { return p.id; })).then(function (r) {
         var on = {}; (r.data || []).forEach(function (x) { on[x.post_id] = 1; });
         ps.forEach(function (p) { p.liked = !!on[p.id]; });
         return ps;
       });
+    }).then(function (ps) {
+      var ids = []; ps.forEach(function (p) { if (ids.indexOf(p.user_id) < 0) ids.push(p.user_id); });
+      if (!ids.length) return ps;
+      return sb.from('public_profiles').select('user_id,rank,badges,post_count').in('user_id', ids).then(function (r) {
+        var m = {}; (r.data || []).forEach(function (x) { m[x.user_id] = x; });
+        ps.forEach(function (p) { p.pub = m[p.user_id] || null; });
+        return ps;
+      }).catch(function () { return ps; });
     });
   },
   post: function (p) {
@@ -109,6 +118,7 @@ window.FEED = {
       .then(function () { prof = null; return sb.auth.signInAnonymously(); }).then(function (x) { if (x.data && x.data.user) { user = x.data.user; uid = user.id; } });
   },
   pullProfile: function () { if (this.isGuest()) return Promise.resolve(null); return sb.from('profiles').select('name,avatar,avatar_url,data').eq('user_id', uid).maybeSingle().then(function (r) { if (r.data && r.data.name) prof = { name: r.data.name, avatar: r.data.avatar, avatar_url: r.data.avatar_url }; return r.data || null; }); },
+  publicProfile: function (id) { return sb.from('public_profiles').select('user_id,name,avatar,avatar_url,rank,badges,post_count').eq('user_id', id).maybeSingle().then(function (r) { return r.data || null; }); },
   myProfile: function () { var m = L.me(); return prof || { name: m.name, avatar: m.avatar, avatar_url: null }; },
   // 名前・トプ画を変える（自分の過去の投稿・コメントの表示も変わる）
   saveProfile: function (o) {
@@ -120,6 +130,6 @@ window.FEED = {
       return prof;
     });
   },
-  pushProfile: function (p) { if (this.isGuest()) return Promise.resolve(); var me3 = prof || p; return sb.from('profiles').upsert({ user_id: uid, name: me3.name || '', avatar: me3.avatar || '🍙', avatar_url: prof ? prof.avatar_url : null, data: p.data || {}, updated_at: new Date().toISOString() }).then(function () {}); }
+  pushProfile: function (p) { if (this.isGuest()) return Promise.resolve(); var me3 = prof || p; return sb.from('profiles').upsert({ user_id: uid, name: me3.name || '', avatar: me3.avatar || '🍙', avatar_url: prof ? prof.avatar_url : null, data: p.data || {}, rank: p.rank || null, badges: p.badges || [], post_count: p.post_count || 0, updated_at: new Date().toISOString() }).then(function () {}); }
 };
 })();
