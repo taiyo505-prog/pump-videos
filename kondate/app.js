@@ -84,7 +84,7 @@ function homeHtml() {
   var cats = ['肉', '魚', '卵・大豆', '野菜', '主食', '果物', 'その他'];
   var h = header('くるくるごはん', '今日の献立ルーレット｜冷蔵庫にあるもので決めよう');
   h += "<div class='card'><div class='ct'><span class='no'>1</span>使いたい食材をえらぶ<span class='rt'>" + (st.picked.length ? "<button class='mini' data-act='clear'>リセット</button>" : '') + '</span></div>';
-  h += "<p class='hint'>1回タップ <b class='h1'>✓ 使いたい</b>（どれか使えればOK）　2回タップ <b class='h2'>★ ぜったい使う</b></p>";
+  h += "<p class='hint'><span class='hl'>1回タップ <b class='h1'>✓ 使いたい</b>（どれか使えればOK）</span><span class='hl'>2回タップ <b class='h2'>★ ぜったい使う</b>（全部使う）</span></p>";
   h += "<input id='fq' class='fq' type='search' autocomplete='off' placeholder='🔍 食材をさがす（なければ追加OK）'><div id='fqr'></div>";
   h += "<div class='tabs'>" + cats.map(function (c) { var n = FOODS.filter(function (f) { return f[2] === c && st.picked.indexOf(f[0]) >= 0; }).length; return "<button data-cat='" + c + "' class='" + (st.cat === c ? 'on' : '') + "'>" + c + (n ? ' ' + n : '') + '</button>'; }).join('') + '</div>';
   h += "<div class='foods'>" + FOODS.filter(function (f) { return f[2] === st.cat; }).map(function (f) { return "<button class='fd" + fdCls(f[0]) + "' data-food='" + esc(f[0]) + "'><i>" + ficon(f) + '</i>' + esc(f[0]) + '</button>'; }).join('') + '</div>';
