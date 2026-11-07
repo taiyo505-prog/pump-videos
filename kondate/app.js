@@ -265,6 +265,15 @@ function badgeCell(b) { return "<span class='" + (b[3] ? 'on' : '') + "'><i>" + 
 function rankOf(n) { var r = RANKS[0], nx = null; RANKS.forEach(function (x, i) { if (n >= x[0]) { r = x; nx = RANKS[i + 1] || null; } }); return { r: r, next: nx }; }
 function rankHtml(ps) { var n = ps.length, k = rankOf(n), s2 = streakOf(ps), pct = k.next ? Math.max(5, Math.round((n - k.r[0]) / (k.next[0] - k.r[0]) * 100)) : 100;
   return "<div class='rank'><div class='rk1'><span class='rki'>" + k.r[2] + "</span><div><small>ごはんランク</small><b>" + k.r[1] + "</b></div><div class='rks'>🔥<b>" + s2.now + '</b><small>日連続</small></div></div><div class=\'rkbar\'><i style=\'width:' + pct + "%'></i></div><small class='rkn'>" + (k.next ? 'あと' + (k.next[0] - n) + '回投稿で「' + k.next[2] + ' ' + k.next[1] + '」' : '最高ランク達成！') + '</small></div>'; }
+// ---- ストアのレビュー依頼（Apple 純正の星をタップする画面） ----
+// 気分のいい時だけ: 投稿のごほうび画面を閉じた時か、「作った」を記録した時。
+// 3回以上作った（または2回以上投稿した）人だけ、60日に1回まで。OS 側でも年3回まで。TestFlight 版では Apple の仕様で出ない
+function askReview() {
+  var RV = window.Capacitor && Capacitor.Plugins && Capacitor.Plugins.InAppReview; if (!RV) return;
+  var made = (get(K.made, []) || []).length, posts = myPosts().length; if (made < 3 && posts < 2) return;
+  var last = +get('kd-review-at', 0) || 0; if (Date.now() - last < 60 * 864e5) return;
+  setTimeout(function () { if (document.getElementById('rwOv')) return; put('kd-review-at', Date.now()); RV.requestReview().catch(function () {}); }, 1200);
+}
 // 投稿のあとの「ごほうび」画面
 function rewardAfterPost(r, before, thumb) {
   var ps = myPosts(), n = ps.length, kb = rankOf(before.length), ka = rankOf(n), nb = checkBadges(true);
@@ -274,7 +283,7 @@ function rewardAfterPost(r, before, thumb) {
   if (nb.length) h += "<div class='rwb'><small>新しいバッジをゲット</small>" + nb.map(function (b) { return "<span><i>" + b[2] + '</i>' + b[1] + '</span>'; }).join('') + '</div>';
   h += rankHtml(ps) + "<p class='note' style='text-align:center'>👑 いいねがいちばん多い写真は、「" + esc(r.name) + "」のレシピの顔になって、みんなのレシピ画面に表示されるよ</p><button class='big' data-rw='feed'>みんなのごはんを見る</button><button class='sub2' data-rw='me'>📔 ごはん日記を見る</button></div>";
   ov.innerHTML = h; document.body.appendChild(ov); confetti();
-  ov.addEventListener('click', function (e) { var b = e.target.closest('[data-rw]'); if (e.target === ov || b) { ov.remove(); if (b) { st.tab = b.getAttribute('data-rw'); render(); } } });
+  ov.addEventListener('click', function (e) { var b = e.target.closest('[data-rw]'); if (e.target === ov || b) { ov.remove(); if (b) { st.tab = b.getAttribute('data-rw'); render(); } askReview(); } });
 }
 // ---- 作り方の1ステップ（イラスト・火加減・量・タイマー・ヒント） ----
 function stepHtml(s, k, r, big) {
@@ -319,7 +328,7 @@ function openCook(r) {
     if (a === 'next') { idx++; buzz(); if (idx >= dt.steps.length) { confetti(); bump('cookDone'); } }
     if (a === 'prev' && idx > 0) idx--;
     if (a === 'post') { ov.remove(); keepOn(false); openPost(r); return; }
-    if (a === 'made') { markMade(r); ov.remove(); keepOn(false); toast('作った記録に入れたよ 🍽'); return; }
+    if (a === 'made') { markMade(r); ov.remove(); keepOn(false); toast('作った記録に入れたよ 🍽'); askReview(); return; }
     ov.innerHTML = html(); ov.scrollTop = 0;
   });
 }
@@ -362,7 +371,7 @@ function openRecipe(id, fromSpin) {
     if (a === 'close') ov.remove();
     else if (a === 'fav') { var i = st.fav.indexOf(r.id); if (i >= 0) st.fav.splice(i, 1); else st.fav.unshift(r.id); saveAll(); ov.innerHTML = html(); toast(i >= 0 ? 'お気に入りから外したよ' : 'お気に入りに入れたよ ❤️'); }
     else if (a === 'shop') { addShop(r); ov.innerHTML = html(); }
-    else if (a === 'done') { markMade(r); ov.innerHTML = html(); toast('作った記録に入れたよ 🍽'); }
+    else if (a === 'done') { markMade(r); ov.innerHTML = html(); toast('作った記録に入れたよ 🍽'); askReview(); }
     else if (a === 'made') { ov.remove(); openPost(r); }
     else if (a === 'cook') { openCook(r); }
     else if (a === 'again') { ov.remove(); openSpin(); }

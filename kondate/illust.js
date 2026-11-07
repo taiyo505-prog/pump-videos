@@ -98,7 +98,10 @@ function kind(r) {
   }
   if (/カレー(?!炒め|煮|粉)|ハヤシ|キーマ/.test(n) && r.cat === '丼・麺' && !/うどん/.test(n)) return 'curry';
   if (/オムライス|天津飯/.test(n)) return 'omurice';
-  if (/ドリア|グラタン|ラザニア/.test(n)) return 'gratin';
+  if (/ドリア|グラタン|ラザニア|チーズ焼き/.test(n)) return 'gratin';
+  if (/シチュー/.test(n) && r.cat !== '丼・麺') return 'soup';
+  if (/卵とじ/.test(n)) return 'nimono';
+  if (/^豆腐と.*(あんかけ|チャンプルー)/.test(n)) return 'tofu';
   if (/丼|ビビンバ|タコライス|ガパオ|ライス$|ごはん$|ご飯/.test(n) && !/チャーハン|炒飯|ピラフ|バターライス|炊き込み|混ぜ|ごはん（|たけのこごはん|さつまいもごはん|きのこの炊き込み/.test(n)) return 'don';
   if (/チャーハン|炒飯|ピラフ|バターライス|パエリア|トマトごはん/.test(n)) return 'friedrice';
   if (/炊き込み|混ぜごはん|たけのこごはん|さつまいもごはん|ちらし/.test(n)) return 'mixrice';
