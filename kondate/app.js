@@ -37,6 +37,11 @@ function passFilter(r) {
 }
 // 食材の一致: 一覧にある食材はそのまま一致。自分で入力した食材は「ゆるく」一致（ひらがな/カタカナ・部分一致・豚肉→豚こま肉 など）
 var FOODSET = {}; FOODS.forEach(function (f) { FOODSET[f[0]] = f; });
+// 魚の分け方（白身魚・青魚…）と「〇〇ならなんでも」の選び方
+var FISH_SUB = { '白身魚': ['鮭', 'たら', 'たい', 'カレイ', 'さわら', 'ホッケ'], '青魚': ['サバ', 'アジ', 'いわし', 'さんま', 'ぶり', 'ししゃも', 'サバ缶'], '赤身魚': ['まぐろ', 'サーモン'], 'エビ・イカ・貝': ['エビ', 'イカ', 'タコ', 'ホタテ', 'あさり', 'しじみ', 'シーフードミックス'], '加工品': ['ツナ缶', 'しらす', 'ちくわ', 'かにかま', 'はんぺん', 'かまぼこ', '明太子'] };
+var GROUP = { '白身魚': FISH_SUB['白身魚'], '青魚': FISH_SUB['青魚'], '赤身魚': FISH_SUB['赤身魚'], 'エビ・イカ・貝': FISH_SUB['エビ・イカ・貝'] };
+var GROUP_ICON = { '白身魚': '🐟', '青魚': '🐟', '赤身魚': '🍣', 'エビ・イカ・貝': '🦐' };
+function inGroup(p, name) { return !!(GROUP[p] && GROUP[p].indexOf(name) >= 0); }
 var ALIAS = { '豚肉': '豚', 'ぶた肉': '豚', '鶏肉': '鶏', 'とり肉': '鶏', 'チキン': '鶏', '牛肉': '牛', 'ビーフ': '牛', 'ポーク': '豚', 'たまご': '卵', '玉子': '卵', 'ご飯': 'ごはん', '米': 'ごはん', 'お米': 'ごはん', 'ねぎ': 'ねぎ', 'ネギ': 'ねぎ', 'きのこ類': 'きのこ', 'しめじ': 'きのこ', 'まいたけ': 'きのこ', 'エリンギ': 'きのこ', 'マッシュルーム': 'きのこ', 'ソーセージ': 'ソーセージ', 'じゃこ': 'しらす', 'ちりめん': 'しらす', 'スパゲッティ': 'パスタ', 'スパゲティ': 'パスタ', 'ラーメン': '中華麺', 'やきそば': '中華麺', '焼きそば': '中華麺', 'パン': 'パン', 'シャケ': '鮭', 'さけ': '鮭', 'サケ': '鮭', 'えび': 'エビ', 'いか': 'イカ', 'たこ': 'タコ', 'ほたて': 'ホタテ', 'さば': 'サバ', 'あじ': 'アジ', 'ツナ': 'ツナ', 'とうふ': '豆腐', 'トウフ': '豆腐', 'みかん': 'みかん', 'オレンジ': 'みかん', 'いも': 'いも', 'ポテト': 'じゃがいも', 'トマト': 'トマト', 'たまねぎ': '玉ねぎ', 'タマネギ': '玉ねぎ', 'ニンジン': 'にんじん', '人参': 'にんじん', 'キャベツ': 'キャベツ', 'ナス': 'なす', '茄子': 'なす', '大根': '大根', 'だいこん': '大根', 'ほうれんそう': 'ほうれん草', 'ピーマン': 'ピーマン', 'チョコ': 'チョコ', 'ヨーグルト': 'ヨーグルト' };
 function kana(s) { return String(s || '').trim().replace(/[\u30a1-\u30f6]/g, function (c) { return String.fromCharCode(c.charCodeAt(0) - 0x60); }); }
 function loose(term, name) {
@@ -44,8 +49,8 @@ function loose(term, name) {
   if (!t) return false;
   return n.indexOf(t) >= 0 || n.indexOf(t0) >= 0 || (n.length >= 2 && t0.indexOf(n) >= 0);
 }
-function has(name) { for (var k = 0; k < st.picked.length; k++) { var p = st.picked[k]; if (p === name || (!FOODSET[p] && loose(p, name))) return true; } return false; }
-function score(r) { var n = 0; r.ing.forEach(function (i) { if (i.food && has(i.n)) n++; }); st.picked.forEach(function (p) { if (!FOODSET[p] && loose(p, r.name) && !r.ing.some(function (i) { return loose(p, i.n); })) n++; }); return n; }
+function has(name) { for (var k = 0; k < st.picked.length; k++) { var p = st.picked[k]; if (p === name || inGroup(p, name) || (!FOODSET[p] && !GROUP[p] && loose(p, name))) return true; } return false; }
+function score(r) { var n = 0; r.ing.forEach(function (i) { if (i.food && has(i.n)) n++; }); st.picked.forEach(function (p) { if (!FOODSET[p] && !GROUP[p] && loose(p, r.name) && !r.ing.some(function (i) { return loose(p, i.n); })) n++; }); return n; }
 function needCount(r) { var n = 0; r.ing.forEach(function (i) { if (i.food && !has(i.n)) n++; }); return n; }
 function foodHits(q) { var k = kana(q); if (!k) return []; return FOODS.filter(function (f) { return kana(f[0]).indexOf(k) >= 0 || loose(q, f[0]); }); }
 function customHits(q) { return RECIPES.filter(function (r) { return loose(q, r.name) || r.ing.some(function (i) { return loose(q, i.n); }); }).length; }
@@ -59,7 +64,7 @@ function searchHtml(q) {
   return h;
 }
 // そのレシピでその食材を使うか
-function uses(r, p) { var cu = !FOODSET[p]; return r.ing.some(function (i) { return i.food && (i.n === p || (cu && loose(p, i.n))); }) || (cu && loose(p, r.name)); }
+function uses(r, p) { if (GROUP[p]) return r.ing.some(function (i) { return i.food && GROUP[p].indexOf(i.n) >= 0; }); var cu = !FOODSET[p]; return r.ing.some(function (i) { return i.food && (i.n === p || (cu && loose(p, i.n))); }) || (cu && loose(p, r.name)); }
 // ★ぜったい使う食材は「全部」入っているものだけ。✓使いたい食材は「どれか」入っていればOK（多いほど上）
 function candidates() {
   var l = RECIPES.filter(passFilter), must = st.must.filter(function (m) { return st.picked.indexOf(m) >= 0; });
@@ -86,9 +91,14 @@ function homeHtml() {
   h += "<div class='card'><div class='ct'><span class='no'>1</span>使いたい食材をえらぶ<span class='rt'>" + (st.picked.length ? "<button class='mini' data-act='clear'>リセット</button>" : '') + '</span></div>';
   h += "<p class='hint'><span class='hl'>1回タップ <b class='h1'>✓ 使いたい</b>（どれか使えればOK）</span><span class='hl'>2回タップ <b class='h2'>★ ぜったい使う</b>（全部使う）</span></p>";
   h += "<input id='fq' class='fq' type='search' autocomplete='off' placeholder='🔍 食材をさがす（なければ追加OK）'><div id='fqr'></div>";
-  h += "<div class='tabs'>" + cats.map(function (c) { var n = FOODS.filter(function (f) { return f[2] === c && st.picked.indexOf(f[0]) >= 0; }).length; return "<button data-cat='" + c + "' class='" + (st.cat === c ? 'on' : '') + "'>" + c + (n ? ' ' + n : '') + '</button>'; }).join('') + '</div>';
-  h += "<div class='foods'>" + FOODS.filter(function (f) { return f[2] === st.cat; }).map(function (f) { return "<button class='fd" + fdCls(f[0]) + "' data-food='" + esc(f[0]) + "'><i>" + ficon(f) + '</i>' + esc(f[0]) + '</button>'; }).join('') + '</div>';
-  h += "<div class='picked'>" + (st.picked.length ? st.picked.map(function (p) { var mu = st.must.indexOf(p) >= 0; return "<span data-food='" + esc(p) + "' class='" + (mu ? 'mu' : FOODSET[p] ? '' : 'cu') + "'>" + (mu ? '★' : FOODSET[p] ? '' : '✏️') + esc(p) + "<b data-unpick='" + esc(p) + "'>×</b></span>"; }).join('') : "<span style='background:none;color:var(--sub);padding:4px 0'>えらばないと、全部のレシピから決めるよ</span>") + '</div></div>';
+  h += "<div class='tabs'>" + cats.map(function (c) { var n = FOODS.filter(function (f) { return f[2] === c && st.picked.indexOf(f[0]) >= 0; }).length + (c === '魚' ? Object.keys(GROUP).filter(function (g) { return st.picked.indexOf(g) >= 0; }).length : 0); return "<button data-cat='" + c + "' class='" + (st.cat === c ? 'on' : '') + "'>" + c + (n ? ' ' + n : '') + '</button>'; }).join('') + '</div>';
+  var fl = FOODS.filter(function (f) { return f[2] === st.cat; }), grp = '';
+  if (st.cat === '魚') {
+    h += "<div class='fsub'>" + ['すべて'].concat(Object.keys(FISH_SUB)).map(function (k) { return "<button data-fsub='" + k + "' class='" + ((st.fsub || 'すべて') === k ? 'on' : '') + "'>" + k + '</button>'; }).join('') + '</div>';
+    if (st.fsub && FISH_SUB[st.fsub]) { fl = fl.filter(function (f) { return FISH_SUB[st.fsub].indexOf(f[0]) >= 0; }); if (GROUP[st.fsub]) grp = "<button class='fd grp" + fdCls(st.fsub) + "' data-food='" + esc(st.fsub) + "'><i>" + GROUP_ICON[st.fsub] + '</i>' + esc(st.fsub) + '<small>どれでもOK</small></button>'; }
+  }
+  h += "<div class='foods'>" + grp + fl.map(function (f) { return "<button class='fd" + fdCls(f[0]) + "' data-food='" + esc(f[0]) + "'><i>" + ficon(f) + '</i>' + esc(f[0]) + '</button>'; }).join('') + '</div>';
+  h += "<div class='picked'>" + (st.picked.length ? st.picked.map(function (p) { var mu = st.must.indexOf(p) >= 0; return "<span data-food='" + esc(p) + "' class='" + (mu ? 'mu' : (FOODSET[p] || GROUP[p]) ? '' : 'cu') + "'>" + (mu ? '★' : FOODSET[p] ? '' : GROUP[p] ? GROUP_ICON[p] : '✏️') + esc(p) + "<b data-unpick='" + esc(p) + "'>×</b></span>"; }).join('') : "<span style='background:none;color:var(--sub);padding:4px 0'>えらばないと、全部のレシピから決めるよ</span>") + '</div></div>';
   h += "<div class='card'><div class='ct'><span class='no'>2</span>しぼりこみ（なくてもOK）</div>";
   h += "<div class='fll'>しゅるい</div><div class='fl'>" + [['all', 'ぜんぶ'], ['主菜', '🍖 主菜'], ['丼・麺', '🍚 丼・麺'], ['副菜', '🥗 副菜'], ['汁物', '🥣 汁物'], ['デザート', '🍮 デザート']].map(function (x) { return "<button data-fc='" + x[0] + "' class='" + (st.flt.cat === x[0] ? 'on' : '') + "'>" + x[1] + '</button>'; }).join('') + '</div>';
   h += "<div class='fll'>じかん</div><div class='fl'>" + [[0, 'ぜんぶ'], [10, '⚡ 10分以内'], [20, '20分以内'], [30, '30分以内']].map(function (x) { return "<button data-fm='" + x[0] + "' class='" + (st.flt.min === x[0] ? 'on' : '') + "'>" + x[1] + '</button>'; }).join('') + '</div>';
@@ -101,12 +111,26 @@ function homeHtml() {
 }
 
 // ---- ルーレット ----
+// 候補から n 品をえらぶ（重みつき・同じものは2回えらばない）
+function pickWheel(c, n) {
+  var recent = get('kd-recent', []), best = score(c[0]);
+  // いちばん多く食材を使うレシピたちを優先。それが少ないとき（12品未満）だけ、次に合うものも少しまぜる
+  var top = c.filter(function (r) { return score(r) >= best; }), src = top.length >= 12 ? top : c.filter(function (r) { return score(r) >= best - 1; });
+  var pool = src.map(function (r) { var w = (score(r) >= best ? 1 : .25) / (1 + needCount(r) * .3); if (recent.indexOf(r.id) >= 0) w *= .06; return [r, w]; });
+  var out = [];
+  while (out.length < n && pool.length) {
+    var sum = 0; pool.forEach(function (p) { sum += p[1]; });
+    var x = Math.random() * sum, k = 0; while (k < pool.length - 1 && (x -= pool[k][1]) > 0) k++;
+    out.push(pool[k][0]); pool.splice(k, 1);
+  }
+  return out;
+}
+function rememberWin(id) { var r = get('kd-recent', []).filter(function (x) { return x !== id; }); r.unshift(id); put('kd-recent', r.slice(0, 40)); }
 var wheel = null;
 function openSpin() {
   var c = candidates(); if (!c.length) return;
-  // 回る盤に並べるのは最大8品（よく合うものを多めに、残りはランダム）
-  var top = c.slice(0, 12); for (var i = top.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = top[i]; top[i] = top[j]; top[j] = t; }
-  var items = top.slice(0, Math.min(8, top.length));
+  // 回る盤に並べるのは最大8品。候補ぜんぶから「よく合うもの」ほど出やすく、最近当たったものは出にくく選ぶ（毎回同じにならないように）
+  var items = pickWheel(c, 8);
   var ov = document.createElement('div'); ov.className = 'ov'; ov.id = 'spinOv';
   ov.innerHTML = "<div class='sheet'><h2>🎰 ルーレット！</h2><div class='wheelbox'><canvas id='wh' width='720' height='720'></canvas><div class='pin'></div><div class='hub'>🍳</div></div><button class='big' id='spinGo'>スタート！</button><button class='sub2' id='spinNo'>とじる</button></div>";
   document.body.appendChild(ov);
@@ -146,7 +170,7 @@ function spin() {
     wheel.ang = start + total * e; drawWheel();
     var cur = Math.floor((((-wheel.ang) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2)) / seg);
     if (cur !== last) { last = cur; tick(); }
-    if (p < 1) requestAnimationFrame(f); else setTimeout(function () { var ov = $('spinOv'); if (ov) ov.remove(); confetti(); buzz(); bump('spins'); openRecipe(wheel.items[win].id, true); }, 350);
+    if (p < 1) requestAnimationFrame(f); else setTimeout(function () { var ov = $('spinOv'); if (ov) ov.remove(); confetti(); buzz(); bump('spins'); rememberWin(wheel.items[win].id); openRecipe(wheel.items[win].id, true); }, 350);
   }
   requestAnimationFrame(f);
 }
@@ -646,6 +670,7 @@ document.addEventListener('click', function (e) {
   if ((b = t.closest('[data-tmx]'))) { var tid = +b.getAttribute('data-tmx'); timers = timers.filter(function (x) { return x.id !== tid; }); tickTimers(); return; }
   if ((b = t.closest('.nav [data-tab]'))) { st.tab = b.getAttribute('data-tab'); if (st.tab !== 'feed') feedRecipe = null; render(); return; }
   if ((b = t.closest('[data-cat]'))) { st.cat = b.getAttribute('data-cat'); render(); return; }
+  if ((b = t.closest('[data-fsub]'))) { st.fsub = b.getAttribute('data-fsub'); var y0 = window.scrollY; render(); window.scrollTo(0, y0); return; }
   if ((b = t.closest('[data-unpick]'))) { var un = b.getAttribute('data-unpick'), ui = st.picked.indexOf(un); if (ui >= 0) st.picked.splice(ui, 1); saveAll(); var uy = window.scrollY; render(); window.scrollTo(0, uy); return; }
   if ((b = t.closest('[data-food]'))) { var n = b.getAttribute('data-food'), i = st.picked.indexOf(n), mi = st.must.indexOf(n);
     if (i < 0) st.picked.push(n); else if (mi < 0) st.must.push(n); else { st.picked.splice(i, 1); st.must.splice(mi, 1); } saveAll(); var y = window.scrollY; render(); window.scrollTo(0, y); buzz(); return; }
